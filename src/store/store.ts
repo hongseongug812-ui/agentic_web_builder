@@ -1,12 +1,21 @@
 import { create } from "zustand";
 
-export type AgentStatus = "idle" | "working" | "done";
+export type AgentStatus = "idle" | "working" | "done" | "error";
 
 export interface AgentState {
     id: string;
     name: string;
-    role: "user" | "pm" | "frontend";
+    role: "user" | "pm" | "frontend" | "backend";
     status: AgentStatus;
+}
+
+/* ── Debate Message (matches backend) ── */
+export interface DebateMessage {
+    agent: string;
+    round: number;
+    message_type: "plan" | "review" | "revision" | "approval" | "code" | "be_code";
+    content: string;
+    data?: Record<string, unknown>;
 }
 
 /* ── Template Data ── */
@@ -179,7 +188,7 @@ export const TEMPLATES: TemplateItem[] = [
     },
 ];
 
-/* ── Style Data (per template) ── */
+/* ── Style Data ── */
 export interface StyleItem {
     id: string;
     name: string;
@@ -231,7 +240,7 @@ export const STYLES_MAP: Record<string, StyleItem[]> = {
     ],
 };
 
-/* ── Helper: look up names from IDs ── */
+/* ── Helpers ── */
 export function getTemplateName(templateId: string): string {
     return TEMPLATES.find((t) => t.id === templateId)?.name ?? templateId;
 }
@@ -242,93 +251,37 @@ export function getStylesForTemplate(templateId: string): StyleItem[] {
     return STYLES_MAP[templateId] ?? [];
 }
 
-/* ── Color Options ── */
-export const colorOptions = [
-    "Blue",
-    "Dark",
-    "Neon",
-    "Sunset",
-    "Forest",
-    "Minimal White",
-] as const;
+/* ── Color & Feature Options ── */
+export const colorOptions = ["Blue", "Dark", "Neon", "Sunset", "Forest", "Minimal White"] as const;
 export type ColorName = (typeof colorOptions)[number];
 
-/* ── Feature Options ── */
-export const featureOptions = [
-    "로그인",
-    "결제",
-    "검색",
-    "다크모드",
-    "반응형",
-    "다국어",
-] as const;
+export const featureOptions = ["로그인", "결제", "검색", "다크모드", "반응형", "다국어"] as const;
 export type FeatureName = (typeof featureOptions)[number];
-
 export type FeaturesMap = Record<FeatureName, boolean>;
 
 const defaultFeatures: FeaturesMap = Object.fromEntries(
     featureOptions.map((f) => [f, false])
 ) as FeaturesMap;
 
-/* ── Fake output data for each agent ── */
-export const agentOutputs: Record<string, object> = {
-    "user-input": {
-        type: "user_prompt",
-        content: "쇼핑몰 메인 페이지를 만들어줘",
-        timestamp: "2026-03-10T07:42:00Z",
-        metadata: {
-            language: "ko",
-            complexity: "medium",
-            estimated_components: 5,
-        },
-    },
-    "pm-agent": {
-        type: "project_plan",
-        title: "쇼핑몰 메인 페이지 기획서",
-        sections: [
-            {
-                name: "Hero Banner",
-                description: "메인 비주얼 슬라이드 영역",
-                priority: "high",
-            },
-            {
-                name: "Category Grid",
-                description: "상품 카테고리 그리드 (4열)",
-                priority: "high",
-            },
-            {
-                name: "Featured Products",
-                description: "추천 상품 캐러셀",
-                priority: "medium",
-            },
-            {
-                name: "Newsletter CTA",
-                description: "뉴스레터 구독 섹션",
-                priority: "low",
-            },
-        ],
-        tech_stack: ["Next.js 14", "Tailwind CSS", "Framer Motion"],
-        estimated_time: "2h",
-    },
-    "frontend-agent": {
-        type: "generated_code",
-        framework: "Next.js 14",
-        files: [
-            { path: "src/app/page.tsx", status: "created", lines: 142 },
-            { path: "src/components/HeroBanner.tsx", status: "created", lines: 58 },
-            { path: "src/components/CategoryGrid.tsx", status: "created", lines: 73 },
-            { path: "src/components/FeaturedProducts.tsx", status: "created", lines: 95 },
-        ],
-        build_status: "success",
-        preview_url: "https://preview.vercel.app/abc123",
-    },
-};
+/* ── Provider Types ── */
+export interface LLMProviderInfo {
+    id: string;
+    name: string;
+    icon: string;
+    configured: boolean;
+}
+
+/* ── API Config ── */
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const WS_BASE = API_BASE.replace(/^http/, "ws");
+
+/* ── Store Interface ── */
 interface FlowStore {
-    /* ── View state ── */
+    /* View */
     currentView: "setup" | "canvas";
     setView: (v: "setup" | "canvas") => void;
 
-    /* ── React Flow state ── */
+    /* React Flow */
     agents: AgentState[];
     isRunning: boolean;
     selectedNodeId: string | null;
@@ -338,9 +291,22 @@ interface FlowStore {
     resetAllAgents: () => void;
     selectNode: (id: string | null) => void;
     setSidebarCollapsed: (v: boolean) => void;
-    runSequence: () => void;
 
-    /* ── Template builder state (IDs) ── */
+    /* Debate & Output */
+    agentOutputData: Record<string, unknown>;
+    debateMessages: DebateMessage[];
+    currentRound: number;
+    error: string | null;
+    setError: (e: string | null) => void;
+    clearDebate: () => void;
+
+    /* Pipeline Progress */
+    pipelineStep: number;
+    pipelineTotal: number;
+    pipelineLabel: string;
+    retryAvailable: boolean;
+
+    /* Template Builder */
     selectedTemplateId: string;
     selectedStyleId: string;
     styleHistory: Record<string, string>;
@@ -355,30 +321,35 @@ interface FlowStore {
     setPromptMode: (m: "auto" | "manual") => void;
     setManualPrompt: (p: string) => void;
     generatePrompt: () => string;
+
+    /* LLM Provider */
+    selectedProvider: string;
+    availableProviders: LLMProviderInfo[];
+    setProvider: (p: string) => void;
+    fetchProviders: () => void;
+
+    /* Core action */
+    runSequence: () => void;
+    retrySequence: () => void;
 }
 
 const defaultAgents: AgentState[] = [
     { id: "user-input", name: "사용자 입력", role: "user", status: "idle" },
     { id: "pm-agent", name: "PM 에이전트", role: "pm", status: "idle" },
-    {
-        id: "frontend-agent",
-        name: "Frontend 에이전트",
-        role: "frontend",
-        status: "idle",
-    },
+    { id: "frontend-agent", name: "Frontend 에이전트", role: "frontend", status: "idle" },
+    { id: "backend-agent", name: "Backend 에이전트", role: "backend", status: "idle" },
 ];
 
-/* ── Build default style history (first style per template) ── */
 const defaultStyleHistory: Record<string, string> = Object.fromEntries(
     TEMPLATES.map((t) => [t.id, STYLES_MAP[t.id]?.[0]?.id ?? ""])
 );
 
 export const useFlowStore = create<FlowStore>((set, get) => ({
-    /* ── View state ── */
+    /* ── View ── */
     currentView: "setup" as "setup" | "canvas",
     setView: (v) => set({ currentView: v }),
 
-    /* ── React Flow state ── */
+    /* ── React Flow ── */
     agents: defaultAgents.map((a) => ({ ...a })),
     isRunning: false,
     selectedNodeId: null,
@@ -401,7 +372,21 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
     selectNode: (id) => set({ selectedNodeId: id }),
     setSidebarCollapsed: (v) => set({ isSidebarCollapsed: v }),
 
-    /* ── Template builder state (ID-based) ── */
+    /* ── Debate & Output ── */
+    agentOutputData: {},
+    debateMessages: [],
+    currentRound: 0,
+    error: null,
+    setError: (e) => set({ error: e }),
+    clearDebate: () => set({ debateMessages: [], agentOutputData: {}, currentRound: 0, error: null, pipelineStep: 0, pipelineLabel: "" }),
+
+    /* Pipeline Progress */
+    pipelineStep: 0,
+    pipelineTotal: 6,
+    pipelineLabel: "",
+    retryAvailable: false,
+
+    /* ── Template Builder ── */
     selectedTemplateId: "campus-hub",
     selectedStyleId: STYLES_MAP["saas"]?.[0]?.id ?? "hero-cta",
     styleHistory: { ...defaultStyleHistory },
@@ -431,49 +416,204 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
     setPromptMode: (m) => set({ promptMode: m }),
     setManualPrompt: (p) => set({ manualPrompt: p }),
 
+    /* ── LLM Provider ── */
+    selectedProvider: "gemini",
+    availableProviders: [],
+    setProvider: (p) => set({ selectedProvider: p }),
+    fetchProviders: async () => {
+        try {
+            const res = await fetch(`${API_BASE}/api/providers`);
+            if (res.ok) {
+                const providers = await res.json();
+                set({ availableProviders: providers });
+                // Auto-select first configured provider
+                const configured = providers.find((p: LLMProviderInfo) => p.configured);
+                if (configured) set({ selectedProvider: configured.id });
+            }
+        } catch { /* silent */ }
+    },
+
     generatePrompt: () => {
         const { promptMode, manualPrompt, selectedTemplateId, selectedStyleId, selectedColor, features } = get();
-        if (promptMode === "manual" && manualPrompt.trim()) {
-            return manualPrompt;
-        }
+        if (promptMode === "manual" && manualPrompt.trim()) return manualPrompt;
+
         const templateName = getTemplateName(selectedTemplateId);
         const styleName = getStyleName(selectedTemplateId, selectedStyleId);
         const enabledFeatures = (Object.entries(features) as [FeatureName, boolean][])
             .filter(([, v]) => v)
             .map(([k]) => k);
-        const featureStr =
-            enabledFeatures.length > 0 ? enabledFeatures.join(", ") : "없음";
+        const featureStr = enabledFeatures.length > 0 ? enabledFeatures.join(", ") : "없음";
         return `너는 전문 웹 개발자야. ${templateName} 템플릿을 기반으로 사이트를 만들어줘. 스타일은 "${styleName}" 방식으로 구성해. 메인 컬러는 ${selectedColor}를 사용하고, 필수 기능으로 ${featureStr}를 포함해서 설계해.`;
     },
 
+    /* ── Run Sequence: WebSocket + API 호출 ── */
     runSequence: () => {
-        const { isRunning, agents, setAgentStatus, generatePrompt } = get();
+        const { isRunning, generatePrompt, setAgentStatus } = get();
         if (isRunning) return;
 
-        // 1. Generate and store the prompt
         const prompt = generatePrompt();
-        set({ lastGeneratedPrompt: prompt });
-
-        // 2. Switch to canvas view and start running
-        set({ currentView: "canvas", isSidebarCollapsed: true, isRunning: true });
-        get().resetAllAgents();
-
-        const nodeIds = agents.map((a) => a.id);
-        let delay = 0;
-
-        nodeIds.forEach((id, index) => {
-            setTimeout(() => {
-                setAgentStatus(id, "working");
-            }, delay);
-
-            setTimeout(() => {
-                setAgentStatus(id, "done");
-                if (index === nodeIds.length - 1) {
-                    set({ isRunning: false });
-                }
-            }, delay + 2000);
-
-            delay += 2000;
+        set({
+            lastGeneratedPrompt: prompt,
+            currentView: "canvas",
+            isSidebarCollapsed: true,
+            isRunning: true,
+            error: null,
         });
+        get().resetAllAgents();
+        get().clearDebate();
+
+        // 1) 사용자 입력 노드 완료
+        setAgentStatus("user-input", "working");
+        setTimeout(() => {
+            setAgentStatus("user-input", "done");
+            set((state) => ({
+                agentOutputData: {
+                    ...state.agentOutputData,
+                    "user-input": {
+                        type: "user_prompt",
+                        content: prompt,
+                        timestamp: new Date().toISOString(),
+                    },
+                },
+            }));
+        }, 600);
+
+        // 2) WebSocket 연결
+        let ws: WebSocket | null = null;
+        try {
+            ws = new WebSocket(`${WS_BASE}/ws/status`);
+        } catch {
+            // WebSocket 연결 실패 시에도 API는 호출
+        }
+
+        if (ws) {
+            ws.onmessage = (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    const { event: evtType, data } = msg;
+
+                    if (evtType === "agent_start" && data?.agent) {
+                        setAgentStatus(data.agent, "working");
+                        if (data.round) set({ currentRound: data.round });
+
+                        // Pipeline progress tracking
+                        const labelMap: Record<string, string> = {
+                            "pm-agent": data.action === "revising" ? `PM 기획서 수정 (R${data.round})` : "PM 기획서 작성",
+                            "frontend-agent": data.action === "reviewing" ? `FE 리뷰 (R${data.round})` : "FE 코드 생성",
+                            "backend-agent": "BE 코드 생성",
+                        };
+                        set((state) => ({
+                            pipelineStep: state.pipelineStep + 0.5,
+                            pipelineLabel: labelMap[data.agent] || data.action || "",
+                        }));
+                    } else if (evtType === "agent_done" && data?.agent) {
+                        setAgentStatus(data.agent, "done");
+                        set((state) => ({ pipelineStep: state.pipelineStep + 0.5 }));
+                    } else if (evtType === "debate_message" && data) {
+                        set((state) => ({
+                            debateMessages: [...state.debateMessages, data as DebateMessage],
+                        }));
+                    } else if (evtType === "pipeline_complete") {
+                        set({ isRunning: false, pipelineLabel: "완료", retryAvailable: false });
+                    } else if (evtType === "error") {
+                        set({ error: data?.message || "알 수 없는 오류", isRunning: false, retryAvailable: true });
+                    }
+                } catch {
+                    /* ignore parse errors */
+                }
+            };
+            ws.onerror = () => {
+                /* silent — API call will still work */
+            };
+            // WebSocket reconnection with exponential backoff
+            let wsRetryCount = 0;
+            ws.onclose = () => {
+                if (get().isRunning && wsRetryCount < 3) {
+                    const delay = Math.min(1000 * Math.pow(2, wsRetryCount), 8000);
+                    wsRetryCount++;
+                    setTimeout(() => {
+                        try {
+                            const newWs = new WebSocket(`${WS_BASE}/ws/status`);
+                            newWs.onmessage = ws!.onmessage;
+                            newWs.onerror = ws!.onerror;
+                            newWs.onclose = ws!.onclose;
+                            ws = newWs;
+                        } catch { /* silent */ }
+                    }, delay);
+                }
+            };
+        }
+
+        // 3) POST /api/orchestrate 호출 (WebSocket 연결 후 바로 실행)
+        (async () => {
+            try {
+                const res = await fetch(`${API_BASE}/api/orchestrate`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ prompt, max_rounds: 3, provider: get().selectedProvider }),
+                });
+
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({ detail: "서버 오류" }));
+                    set({
+                        error: errData.detail || `서버 오류 (${res.status})`,
+                        isRunning: false,
+                        retryAvailable: true,
+                    });
+                    setAgentStatus("pm-agent", "error");
+                    setAgentStatus("frontend-agent", "error");
+                    setAgentStatus("backend-agent", "error");
+                    ws?.close();
+                    return;
+                }
+
+                const result = await res.json();
+
+                // 에이전트 출력 저장
+                set((state) => ({
+                    agentOutputData: {
+                        ...state.agentOutputData,
+                        "pm-agent": {
+                            type: "project_plan",
+                            data: result.plan,
+                            rounds: result.total_rounds,
+                        },
+                        "frontend-agent": {
+                            type: "generated_code",
+                            data: result.code,
+                        },
+                        "backend-agent": {
+                            type: "generated_code",
+                            data: result.backend_code,
+                        },
+                    },
+                    debateMessages: result.debate_log || state.debateMessages,
+                    isRunning: false,
+                }));
+
+                setAgentStatus("pm-agent", "done");
+                setAgentStatus("frontend-agent", "done");
+                setAgentStatus("backend-agent", result.backend_code ? "done" : "idle");
+            } catch (err) {
+                set({
+                    error: err instanceof Error ? err.message : "네트워크 오류",
+                    isRunning: false,
+                    retryAvailable: true,
+                });
+                setAgentStatus("pm-agent", "error");
+                setAgentStatus("frontend-agent", "error");
+                setAgentStatus("backend-agent", "error");
+            } finally {
+                ws?.close();
+            }
+        })();
+    },
+
+    /* ── Retry ── */
+    retrySequence: () => {
+        const { retryAvailable } = get();
+        if (!retryAvailable) return;
+        set({ error: null, retryAvailable: false, pipelineStep: 0, pipelineLabel: "" });
+        get().runSequence();
     },
 }));

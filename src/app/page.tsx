@@ -3,6 +3,11 @@
 import { useState } from "react";
 import FlowCanvas from "@/components/FlowCanvas";
 import NodeDetailPanel from "@/components/NodeDetailPanel";
+import CodePreviewPanel from "@/components/CodePreviewPanel";
+import PipelineProgress from "@/components/PipelineProgress";
+import SetupGuide from "@/components/SetupGuide";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import ToastContainer from "@/components/Toast";
 import { useFlowStore, TEMPLATES, TEMPLATE_CATEGORIES } from "@/store/store";
 import { ArrowLeft, Sparkles, Check } from "lucide-react";
 
@@ -32,7 +37,7 @@ function TopBar() {
       </div>
       <div className="ml-auto flex items-center gap-3">
         <span className="text-xs text-white/30 font-[family-name:var(--font-geist-mono)]">
-          v0.1.0
+          v0.4.0
         </span>
       </div>
     </header>
@@ -222,12 +227,21 @@ function SetupView() {
   );
 }
 
-/* ── Canvas View: React Flow + Detail Panel ── */
+/* ── Canvas View: React Flow + Detail + Code ── */
 function CanvasView() {
   return (
-    <div className="flex flex-1 overflow-hidden bg-gray-950">
+    <div className="flex flex-1 overflow-hidden bg-gray-950 animate-[scaleIn_0.3s_ease-out]">
       <main className="flex-1 flex flex-col overflow-hidden bg-gray-950 relative">
-        <FlowCanvas />
+        {/* Pipeline Progress Bar */}
+        <PipelineProgress />
+        {/* Canvas (top) */}
+        <div className="flex-[3] min-h-0 overflow-hidden">
+          <FlowCanvas />
+        </div>
+        {/* Code Preview (bottom) */}
+        <div className="flex-[2] min-h-0 overflow-hidden">
+          <CodePreviewPanel />
+        </div>
       </main>
       <NodeDetailPanel />
     </div>
@@ -239,9 +253,19 @@ export default function Home() {
   const currentView = useFlowStore((s) => s.currentView);
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden font-[family-name:var(--font-geist-sans)]">
-      <TopBar />
-      {currentView === "setup" ? <SetupView /> : <CanvasView />}
-    </div>
+    <ErrorBoundary>
+      <div className="flex flex-col h-screen w-screen overflow-hidden font-[family-name:var(--font-geist-sans)]" role="application" aria-label="Agentic Web Builder">
+        <TopBar />
+        {currentView === "setup" ? (
+          <>
+            <SetupGuide />
+            <SetupView />
+          </>
+        ) : (
+          <CanvasView />
+        )}
+        <ToastContainer />
+      </div>
+    </ErrorBoundary>
   );
 }

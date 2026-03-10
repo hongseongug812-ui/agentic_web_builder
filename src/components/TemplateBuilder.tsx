@@ -1,10 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
 import {
-    Layout,
-    Search,
-    BarChart3,
-    Palette,
     Check,
     Sparkles,
     LogIn,
@@ -15,11 +12,11 @@ import {
     Globe,
     PanelLeftOpen,
     PanelLeftClose,
+    Cpu,
 } from "lucide-react";
 import {
     useFlowStore,
     TEMPLATES,
-    STYLES_MAP,
     getStylesForTemplate,
     colorOptions,
     featureOptions,
@@ -27,15 +24,7 @@ import {
     FeatureName,
 } from "@/store/store";
 
-/* ── Template icons ── */
-const templateIcons: Record<string, React.ReactNode> = {
-    "검색창 스타일": <Search className="w-3.5 h-3.5" />,
-    "SaaS 랜딩페이지": <Layout className="w-3.5 h-3.5" />,
-    쇼핑몰: <CreditCard className="w-3.5 h-3.5" />,
-    포트폴리오: <Palette className="w-3.5 h-3.5" />,
-    블로그: <Layout className="w-3.5 h-3.5" />,
-    대시보드: <BarChart3 className="w-3.5 h-3.5" />,
-};
+/* ── (Template icons removed — unused) ── */
 
 /* ── Color swatches ── */
 const colorSwatches: Record<string, string> = {
@@ -74,6 +63,14 @@ export default function TemplateBuilder() {
     const manualPrompt = useFlowStore((s) => s.manualPrompt);
     const setPromptMode = useFlowStore((s) => s.setPromptMode);
     const setManualPrompt = useFlowStore((s) => s.setManualPrompt);
+    const selectedProvider = useFlowStore((s) => s.selectedProvider);
+    const availableProviders = useFlowStore((s) => s.availableProviders);
+    const setProvider = useFlowStore((s) => s.setProvider);
+    const fetchProviders = useFlowStore((s) => s.fetchProviders);
+
+    useEffect(() => {
+        fetchProviders();
+    }, [fetchProviders]);
 
     const prompt = generatePrompt();
     const disabled = isRunning;
@@ -382,6 +379,49 @@ export default function TemplateBuilder() {
                       `}
                                         />
                                     </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* ── AI 모델 선택 ── */}
+                <div className="px-4 pb-4 border-b border-white/[0.06]">
+                    <label className="text-[11px] font-medium text-white/40 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                        <Cpu className="w-3 h-3" />
+                        AI 모델
+                    </label>
+                    <div className="grid grid-cols-3 gap-1.5">
+                        {(availableProviders.length > 0 ? availableProviders : [
+                            { id: "gemini", name: "Gemini", icon: "✨", configured: false },
+                            { id: "claude", name: "Claude", icon: "🟠", configured: false },
+                            { id: "gpt", name: "GPT-4o", icon: "🟢", configured: false },
+                        ]).map((p) => {
+                            const isSelected = selectedProvider === p.id;
+                            return (
+                                <button
+                                    key={p.id}
+                                    onClick={() => setProvider(p.id)}
+                                    disabled={!p.configured}
+                                    title={p.configured ? p.name : `${p.name} (API 키 미설정)`}
+                                    className={`
+                                        relative flex flex-col items-center gap-1 py-2.5 px-2 rounded-lg
+                                        transition-all duration-200 text-center
+                                        ${isSelected
+                                            ? "bg-indigo-500/15 border border-indigo-500/40 shadow-lg shadow-indigo-500/10"
+                                            : p.configured
+                                                ? "bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.05] hover:border-white/15"
+                                                : "bg-white/[0.01] border border-white/[0.04] opacity-40 cursor-not-allowed"
+                                        }
+                                    `}
+                                >
+                                    <span className="text-base">{p.icon}</span>
+                                    <span className={`text-[10px] font-medium ${isSelected ? "text-indigo-300" : p.configured ? "text-white/60" : "text-white/25"}`}>
+                                        {p.name}
+                                    </span>
+                                    {!p.configured && (
+                                        <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-red-500/80 text-white flex items-center justify-center text-[8px] font-bold">!</span>
+                                    )}
                                 </button>
                             );
                         })}

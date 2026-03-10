@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
     MessageSquare,
     ClipboardList,
@@ -10,24 +11,38 @@ import {
     X,
     FileJson,
     Clock,
+    MessagesSquare,
+    AlertCircle,
+    Server,
 } from "lucide-react";
-import { useFlowStore, agentOutputs, AgentStatus } from "@/store/store";
+import { useFlowStore, AgentStatus, DebateMessage } from "@/store/store";
 
 /* ── Role → Icon ── */
-const roleIcons: Record<string, React.ReactNode> = {
+const roleIcons: { [key: string]: React.ReactNode } = {
     user: <MessageSquare className="w-4 h-4" />,
     pm: <ClipboardList className="w-4 h-4" />,
     frontend: <Code2 className="w-4 h-4" />,
+    backend: <Server className="w-4 h-4" />,
 };
 
-/* ── Role → Color ── */
+/* ── Role → Colors ── */
 const roleColors: Record<string, { accent: string; bg: string; border: string }> = {
     user: { accent: "#818cf8", bg: "rgba(99, 102, 241, 0.08)", border: "rgba(99, 102, 241, 0.2)" },
     pm: { accent: "#34d399", bg: "rgba(16, 185, 129, 0.08)", border: "rgba(16, 185, 129, 0.2)" },
     frontend: { accent: "#f472b6", bg: "rgba(244, 114, 182, 0.08)", border: "rgba(244, 114, 182, 0.2)" },
+    backend: { accent: "#fbbf24", bg: "rgba(251, 191, 36, 0.08)", border: "rgba(251, 191, 36, 0.2)" },
 };
 
-/* ── Status label component ── */
+/* ── Message type labels ── */
+const messageTypeLabels: Record<string, { label: string; color: string }> = {
+    plan: { label: "📋 기획서", color: "text-emerald-400" },
+    review: { label: "🔍 리뷰", color: "text-amber-400" },
+    revision: { label: "✏️ 수정안", color: "text-blue-400" },
+    approval: { label: "✅ 승인", color: "text-emerald-400" },
+    code: { label: "💻 코드 생성", color: "text-purple-400" },
+};
+
+/* ── Status label ── */
 function StatusLabel({ status }: { status: AgentStatus }) {
     if (status === "working") {
         return (
@@ -45,6 +60,14 @@ function StatusLabel({ status }: { status: AgentStatus }) {
             </div>
         );
     }
+    if (status === "error") {
+        return (
+            <div className="flex items-center gap-1.5 text-red-400">
+                <AlertCircle className="w-3.5 h-3.5" />
+                <span className="text-xs font-medium">오류</span>
+            </div>
+        );
+    }
     return (
         <div className="flex items-center gap-1.5 text-white/30">
             <Circle className="w-3.5 h-3.5" />
@@ -53,31 +76,74 @@ function StatusLabel({ status }: { status: AgentStatus }) {
     );
 }
 
+/* ── Debate Message Bubble ── */
+function DebateBubble({ msg, index }: { msg: DebateMessage; index: number }) {
+    const isPm = msg.agent === "pm";
+    const typeInfo = messageTypeLabels[msg.message_type] || { label: msg.message_type, color: "text-white/50" };
+
+    return (
+        <div
+            className="animate-[fadeInUp_0.4s_ease-out] mb-3"
+            style={{ animationDelay: `${index * 80}ms`, animationFillMode: "both" }}
+        >
+            <div className={`flex items-center gap-1.5 mb-1 ${isPm ? "" : "justify-end"}`}>
+                <span className="text-[9px] text-white/30 font-mono">R{msg.round}</span>
+                <span className={`text-[10px] font-semibold ${typeInfo.color}`}>{typeInfo.label}</span>
+                <span className="text-[9px] text-white/20">{isPm ? "PM" : "FE"}</span>
+            </div>
+            <div className={`rounded-xl p-3 text-[11px] leading-relaxed ${
+                isPm
+                    ? "bg-emerald-500/[0.06] border border-emerald-500/20 text-emerald-200/80 mr-6"
+                    : "bg-pink-500/[0.06] border border-pink-500/20 text-pink-200/80 ml-6"
+            }`}>
+                {msg.content}
+                {msg.data && Array.isArray((msg.data as Record<string, unknown>).suggestions) && ((msg.data as Record<string, unknown>).suggestions as string[]).length > 0 && (
+                    <ul className="mt-2 space-y-1">
+                        {((msg.data as Record<string, unknown>).suggestions as string[]).map((s, i) => (
+                            <li key={i} className="text-[10px] text-white/40 flex items-start gap-1">
+                                <span className="text-white/20 mt-px">•</span>
+                                <span>{s}</span>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
+        </div>
+    );
+}
+
 export default function NodeDetailPanel() {
+    const [activeTab, setActiveTab] = useState<"output" | "debate">("output");
     const selectedNodeId = useFlowStore((s) => s.selectedNodeId);
     const agents = useFlowStore((s) => s.agents);
     const selectNode = useFlowStore((s) => s.selectNode);
+    const agentOutputData = useFlowStore((s) => s.agentOutputData);
+    const debateMessages = useFlowStore((s) => s.debateMessages);
+    const currentRound = useFlowStore((s) => s.currentRound);
 
     const selectedAgent = agents.find((a) => a.id === selectedNodeId);
+
+    // Filter debate messages for selected agent
+    const agentDebateMessages = debateMessages.filter((m) => {
+        if (selectedAgent?.role === "pm") return m.agent === "pm";
+        if (selectedAgent?.role === "frontend") return m.agent === "frontend";
+        return false;
+    });
 
     // Empty state
     if (!selectedAgent) {
         return (
-            <aside className="hidden md:flex flex-col w-[300px] flex-shrink-0 border-l border-white/[0.06] bg-gray-950">
+            <aside className="hidden md:flex flex-col w-[320px] flex-shrink-0 border-l border-white/[0.06] bg-gray-950">
                 <div className="h-10 flex items-center px-4 border-b border-white/[0.06]">
-                    <span className="text-xs font-medium text-white/50 uppercase tracking-wider">
-                        Detail
-                    </span>
+                    <span className="text-xs font-medium text-white/50 uppercase tracking-wider">Detail</span>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4">
                     <div className="flex flex-col items-center justify-center h-full text-center">
-                        <div className="w-10 h-10 rounded-full bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mb-3">
-                            <FileJson className="w-5 h-5 text-white/20" />
+                        <div className="w-12 h-12 rounded-full bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mb-3">
+                            <FileJson className="w-6 h-6 text-white/15" />
                         </div>
                         <p className="text-xs text-white/30 leading-relaxed">
-                            캔버스에서 노드를 클릭하면
-                            <br />
-                            상세 정보가 여기에 표시됩니다
+                            캔버스에서 노드를 클릭하면<br />상세 정보가 여기에 표시됩니다
                         </p>
                     </div>
                 </div>
@@ -86,16 +152,14 @@ export default function NodeDetailPanel() {
     }
 
     const colors = roleColors[selectedAgent.role] || roleColors.user;
-    const icon = roleIcons[selectedAgent.role] || roleIcons.user;
-    const output = agentOutputs[selectedAgent.id];
+    const icon = (roleIcons[selectedAgent.role] ?? roleIcons.user) as React.ReactNode;
+    const output = agentOutputData[selectedAgent.id] as Record<string, unknown> | undefined;
 
     return (
-        <aside className="hidden md:flex flex-col w-[300px] flex-shrink-0 border-l border-white/[0.06] bg-gray-950">
+        <aside className="hidden md:flex flex-col w-[320px] flex-shrink-0 border-l border-white/[0.06] bg-gray-950">
             {/* Header */}
             <div className="h-10 flex items-center justify-between px-4 border-b border-white/[0.06]">
-                <span className="text-xs font-medium text-white/50 uppercase tracking-wider">
-                    Detail
-                </span>
+                <span className="text-xs font-medium text-white/50 uppercase tracking-wider">Detail</span>
                 <button
                     onClick={() => selectNode(null)}
                     className="w-5 h-5 rounded flex items-center justify-center text-white/30 hover:text-white/60 hover:bg-white/5 transition-colors"
@@ -104,12 +168,11 @@ export default function NodeDetailPanel() {
                 </button>
             </div>
 
-            {/* Content */}
             <div className="flex-1 overflow-y-auto">
                 {/* Agent Info Card */}
                 <div className="p-4 border-b border-white/[0.06]">
                     <div
-                        className="flex items-center gap-3 p-3 rounded-xl"
+                        className="flex items-center gap-3 p-3 rounded-xl transition-all duration-300"
                         style={{ background: colors.bg, border: `1px solid ${colors.border}` }}
                     >
                         <div
@@ -119,63 +182,126 @@ export default function NodeDetailPanel() {
                             {icon}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-white/90 truncate">
-                                {selectedAgent.name}
-                            </p>
-                            <p className="text-[10px] text-white/30 font-mono uppercase mt-0.5">
-                                {selectedAgent.role}
-                            </p>
+                            <p className="text-sm font-semibold text-white/90 truncate">{selectedAgent.name}</p>
+                            <p className="text-[10px] text-white/30 font-mono uppercase mt-0.5">{selectedAgent.role}</p>
                         </div>
                     </div>
                 </div>
 
-                {/* Status */}
+                {/* Status + Round */}
                 <div className="px-4 py-3 border-b border-white/[0.06]">
                     <div className="flex items-center justify-between">
                         <span className="text-xs text-white/40 font-medium">상태</span>
                         <StatusLabel status={selectedAgent.status} />
                     </div>
+                    {currentRound > 0 && (
+                        <div className="flex items-center justify-between mt-2">
+                            <span className="text-xs text-white/40 font-medium">토론 라운드</span>
+                            <span className="text-xs text-indigo-400 font-mono">Round {currentRound}</span>
+                        </div>
+                    )}
                 </div>
 
-                {/* Output */}
-                <div className="p-4">
-                    <div className="flex items-center gap-1.5 mb-3">
-                        <FileJson className="w-3.5 h-3.5 text-white/40" />
-                        <span className="text-xs text-white/40 font-medium">출력 데이터</span>
+                {/* Tab selector */}
+                {selectedAgent.role !== "user" && (
+                    <div className="flex border-b border-white/[0.06]">
+                        <button
+                            onClick={() => setActiveTab("output")}
+                            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[11px] font-medium transition-colors ${
+                                activeTab === "output"
+                                    ? "text-indigo-400 border-b-2 border-indigo-400"
+                                    : "text-white/30 hover:text-white/50"
+                            }`}
+                        >
+                            <FileJson className="w-3 h-3" />
+                            출력 데이터
+                        </button>
+                        <button
+                            onClick={() => setActiveTab("debate")}
+                            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[11px] font-medium transition-colors ${
+                                activeTab === "debate"
+                                    ? "text-indigo-400 border-b-2 border-indigo-400"
+                                    : "text-white/30 hover:text-white/50"
+                            }`}
+                        >
+                            <MessagesSquare className="w-3 h-3" />
+                            토론 로그
+                            {agentDebateMessages.length > 0 && (
+                                <span className="w-4 h-4 rounded-full bg-indigo-500/30 text-[9px] text-indigo-400 flex items-center justify-center font-bold">
+                                    {agentDebateMessages.length}
+                                </span>
+                            )}
+                        </button>
                     </div>
+                )}
 
-                    {selectedAgent.status === "done" && output ? (
-                        <div className="rounded-lg border border-white/[0.08] overflow-hidden">
-                            {/* Code block header */}
-                            <div className="flex items-center gap-2 px-3 py-1.5 bg-white/[0.03] border-b border-white/[0.06]">
-                                <div className="flex gap-1">
-                                    <div className="w-2 h-2 rounded-full bg-red-500/60" />
-                                    <div className="w-2 h-2 rounded-full bg-yellow-500/60" />
-                                    <div className="w-2 h-2 rounded-full bg-green-500/60" />
+                {/* Tab Content */}
+                <div className="p-4">
+                    {activeTab === "output" || selectedAgent.role === "user" ? (
+                        /* ── Output tab ── */
+                        <>
+                            {selectedAgent.status === "done" && output ? (
+                                <div className="rounded-lg border border-white/[0.08] overflow-hidden animate-[fadeInUp_0.3s_ease-out]">
+                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-white/[0.03] border-b border-white/[0.06]">
+                                        <div className="flex gap-1">
+                                            <div className="w-2 h-2 rounded-full bg-red-500/60" />
+                                            <div className="w-2 h-2 rounded-full bg-yellow-500/60" />
+                                            <div className="w-2 h-2 rounded-full bg-green-500/60" />
+                                        </div>
+                                        <span className="text-[10px] text-white/30 font-mono">output.json</span>
+                                    </div>
+                                    <pre className="p-3 overflow-x-auto text-[11px] leading-relaxed bg-gray-900/50 max-h-[400px]">
+                                        <code className="text-emerald-300/90 font-mono whitespace-pre-wrap break-words">
+                                            {JSON.stringify(output, null, 2)}
+                                        </code>
+                                    </pre>
                                 </div>
-                                <span className="text-[10px] text-white/30 font-mono">output.json</span>
-                            </div>
-                            {/* Code content */}
-                            <pre className="p-3 overflow-x-auto text-[11px] leading-relaxed bg-gray-900/50">
-                                <code className="text-emerald-300/90 font-mono whitespace-pre-wrap break-words">
-                                    {JSON.stringify(output, null, 2)}
-                                </code>
-                            </pre>
-                        </div>
-                    ) : selectedAgent.status === "working" ? (
-                        <div className="flex flex-col items-center justify-center py-8 text-center">
-                            <Loader2 className="w-6 h-6 text-blue-400/50 animate-spin mb-2" />
-                            <p className="text-xs text-white/25">데이터를 생성하는 중...</p>
-                        </div>
+                            ) : selectedAgent.status === "working" ? (
+                                <div className="flex flex-col items-center justify-center py-8 text-center">
+                                    <div className="relative">
+                                        <Loader2 className="w-8 h-8 text-blue-400/50 animate-spin" />
+                                        <div className="absolute inset-0 w-8 h-8 rounded-full bg-blue-400/10 animate-ping" />
+                                    </div>
+                                    <p className="text-xs text-white/30 mt-3">AI가 작업 중입니다...</p>
+                                    {currentRound > 0 && (
+                                        <p className="text-[10px] text-white/15 mt-1">토론 Round {currentRound}</p>
+                                    )}
+                                </div>
+                            ) : selectedAgent.status === "error" ? (
+                                <div className="flex flex-col items-center justify-center py-8 text-center">
+                                    <AlertCircle className="w-8 h-8 text-red-400/50 mb-2" />
+                                    <p className="text-xs text-red-400/60">오류가 발생했습니다</p>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center py-8 text-center">
+                                    <Clock className="w-6 h-6 text-white/15 mb-2" />
+                                    <p className="text-xs text-white/25">
+                                        작업이 완료되면<br />출력 데이터가 표시됩니다
+                                    </p>
+                                </div>
+                            )}
+                        </>
                     ) : (
-                        <div className="flex flex-col items-center justify-center py-8 text-center">
-                            <Clock className="w-6 h-6 text-white/15 mb-2" />
-                            <p className="text-xs text-white/25">
-                                작업이 완료되면
-                                <br />
-                                출력 데이터가 표시됩니다
-                            </p>
-                        </div>
+                        /* ── Debate tab ── */
+                        <>
+                            {agentDebateMessages.length > 0 ? (
+                                <div className="space-y-1">
+                                    {agentDebateMessages.map((msg, i) => (
+                                        <DebateBubble key={i} msg={msg} index={i} />
+                                    ))}
+                                </div>
+                            ) : selectedAgent.status === "working" ? (
+                                <div className="flex flex-col items-center justify-center py-8 text-center">
+                                    <MessagesSquare className="w-6 h-6 text-white/15 animate-pulse mb-2" />
+                                    <p className="text-xs text-white/25">토론이 진행 중입니다...</p>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center py-8 text-center">
+                                    <MessagesSquare className="w-6 h-6 text-white/15 mb-2" />
+                                    <p className="text-xs text-white/25">아직 토론 기록이 없습니다</p>
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
             </div>

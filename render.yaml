@@ -1,0 +1,22 @@
+# Render.com Blueprint
+# https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: agentic-web-builder-api
+    runtime: python
+    region: singapore  # 한국에서 가장 가까운 리전
+    plan: free
+    buildCommand: |
+      cd backend && pip install -r requirements.txt
+    startCommand: |
+      cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+    healthCheckPath: /health
