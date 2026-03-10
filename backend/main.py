@@ -69,6 +69,7 @@ from routes.backend_agent import router as be_router
 from routes.orchestrator import router as orchestrator_router
 from routes.websocket import router as ws_router
 from routes.export import router as export_router
+from routes.preview_deploy import router as preview_router
 from llm_provider import get_available_providers
 
 
@@ -170,7 +171,7 @@ async def health_check():
             "active": active_count,
             "list": [p["id"] for p in providers if p["configured"]],
         },
-        "endpoints": 8,
+        "endpoints": 12,
     }
 
 
@@ -191,6 +192,7 @@ app.include_router(be_router)
 app.include_router(orchestrator_router)
 app.include_router(ws_router)
 app.include_router(export_router)
+app.include_router(preview_router)
 
 
 # ──────────────────────────────────────────────

@@ -259,6 +259,70 @@ export const featureOptions = ["로그인", "결제", "검색", "다크모드", 
 export type FeatureName = (typeof featureOptions)[number];
 export type FeaturesMap = Record<FeatureName, boolean>;
 
+/* ── Section Builder ── */
+export interface SectionItem {
+    id: string;
+    name: string;
+    icon: string;
+    description: string;
+    category: "layout" | "content" | "conversion" | "social";
+}
+
+export const AVAILABLE_SECTIONS: SectionItem[] = [
+    { id: "nav", name: "내비게이션 바", icon: "🧭", description: "로고 + 메뉴 + CTA 버튼", category: "layout" },
+    { id: "hero", name: "히어로 섹션", icon: "🎯", description: "대형 타이틀 + 서브텍스트 + CTA", category: "layout" },
+    { id: "features", name: "기능 소개", icon: "✨", description: "아이콘 카드 3~4열 그리드", category: "content" },
+    { id: "about", name: "소개 / About", icon: "📝", description: "이미지 + 텍스트 2단 레이아웃", category: "content" },
+    { id: "gallery", name: "갤러리 / 포트폴리오", icon: "🖼️", description: "이미지 그리드 or 메이슨리", category: "content" },
+    { id: "pricing", name: "가격표", icon: "💰", description: "요금제 비교 카드", category: "conversion" },
+    { id: "testimonials", name: "고객 후기", icon: "💬", description: "리뷰 카드 캐러셀", category: "social" },
+    { id: "team", name: "팀 소개", icon: "👥", description: "팀원 프로필 카드", category: "social" },
+    { id: "stats", name: "숫자 통계", icon: "📊", description: "카운터 숫자 강조", category: "content" },
+    { id: "faq", name: "FAQ", icon: "❓", description: "아코디언 질문/답변", category: "content" },
+    { id: "cta", name: "CTA 배너", icon: "🚀", description: "전환 유도 큰 배너", category: "conversion" },
+    { id: "contact", name: "문의 폼", icon: "📧", description: "폼 + 지도/연락처", category: "conversion" },
+    { id: "blog-list", name: "블로그 목록", icon: "📰", description: "최신 글 카드 3열", category: "content" },
+    { id: "footer", name: "푸터", icon: "🔻", description: "링크 + 소셜 + 저작권", category: "layout" },
+];
+
+export const SECTION_CATEGORIES = ["전체", "layout", "content", "conversion", "social"] as const;
+
+export interface DesignTokens {
+    font: string;
+    borderRadius: string;
+    spacing: string;
+    layout: string;
+}
+
+export const FONT_OPTIONS = [
+    { id: "system", name: "시스템 기본", preview: "font-family: -apple-system, sans-serif" },
+    { id: "inter", name: "Inter", preview: "font-family: Inter" },
+    { id: "pretendard", name: "Pretendard", preview: "font-family: Pretendard" },
+    { id: "noto-sans", name: "Noto Sans KR", preview: "font-family: Noto Sans KR" },
+    { id: "poppins", name: "Poppins", preview: "font-family: Poppins" },
+    { id: "playfair", name: "Playfair Display", preview: "font-family: Playfair Display" },
+] as const;
+
+export const RADIUS_OPTIONS = [
+    { id: "none", name: "각진", value: "0px" },
+    { id: "sm", name: "약간 둥근", value: "4px" },
+    { id: "md", name: "보통", value: "8px" },
+    { id: "lg", name: "많이 둥근", value: "16px" },
+    { id: "full", name: "완전 둥근", value: "9999px" },
+] as const;
+
+export const SPACING_OPTIONS = [
+    { id: "compact", name: "컴팩트" },
+    { id: "normal", name: "보통" },
+    { id: "spacious", name: "넉넉한" },
+] as const;
+
+export const LAYOUT_OPTIONS = [
+    { id: "centered", name: "중앙 정렬 (max-w)" },
+    { id: "full-width", name: "전체 너비" },
+    { id: "sidebar", name: "사이드바" },
+] as const;
+
 const defaultFeatures: FeaturesMap = Object.fromEntries(
     featureOptions.map((f) => [f, false])
 ) as FeaturesMap;
@@ -321,6 +385,14 @@ interface FlowStore {
     setPromptMode: (m: "auto" | "manual") => void;
     setManualPrompt: (p: string) => void;
     generatePrompt: () => string;
+
+    /* Section Builder */
+    selectedSections: string[];
+    designTokens: DesignTokens;
+    addSection: (id: string) => void;
+    removeSection: (id: string) => void;
+    reorderSections: (from: number, to: number) => void;
+    setDesignToken: (key: keyof DesignTokens, value: string) => void;
 
     /* LLM Provider */
     selectedProvider: string;
@@ -416,6 +488,25 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
     setPromptMode: (m) => set({ promptMode: m }),
     setManualPrompt: (p) => set({ manualPrompt: p }),
 
+    /* Section Builder */
+    selectedSections: ["nav", "hero", "features", "footer"],
+    designTokens: { font: "inter", borderRadius: "md", spacing: "normal", layout: "centered" },
+    addSection: (id) => set((s) => ({
+        selectedSections: s.selectedSections.includes(id) ? s.selectedSections : [...s.selectedSections, id],
+    })),
+    removeSection: (id) => set((s) => ({
+        selectedSections: s.selectedSections.filter((sId) => sId !== id),
+    })),
+    reorderSections: (from, to) => set((s) => {
+        const arr = [...s.selectedSections];
+        const [moved] = arr.splice(from, 1);
+        arr.splice(to, 0, moved);
+        return { selectedSections: arr };
+    }),
+    setDesignToken: (key, value) => set((s) => ({
+        designTokens: { ...s.designTokens, [key]: value },
+    })),
+
     /* ── LLM Provider ── */
     selectedProvider: "gemini",
     availableProviders: [],
@@ -434,7 +525,7 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
     },
 
     generatePrompt: () => {
-        const { promptMode, manualPrompt, selectedTemplateId, selectedStyleId, selectedColor, features } = get();
+        const { promptMode, manualPrompt, selectedTemplateId, selectedStyleId, selectedColor, features, selectedSections, designTokens } = get();
         if (promptMode === "manual" && manualPrompt.trim()) return manualPrompt;
 
         const templateName = getTemplateName(selectedTemplateId);
@@ -443,7 +534,37 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
             .filter(([, v]) => v)
             .map(([k]) => k);
         const featureStr = enabledFeatures.length > 0 ? enabledFeatures.join(", ") : "없음";
-        return `너는 전문 웹 개발자야. ${templateName} 템플릿을 기반으로 사이트를 만들어줘. 스타일은 "${styleName}" 방식으로 구성해. 메인 컬러는 ${selectedColor}를 사용하고, 필수 기능으로 ${featureStr}를 포함해서 설계해.`;
+
+        // 섹션 구성
+        const sectionNames = selectedSections
+            .map((id) => AVAILABLE_SECTIONS.find((s) => s.id === id))
+            .filter(Boolean)
+            .map((s) => `${s!.icon} ${s!.name} (${s!.description})`)
+            .join("\n- ");
+
+        // 디자인 토큰
+        const fontName = FONT_OPTIONS.find((f) => f.id === designTokens.font)?.name ?? designTokens.font;
+        const radiusName = RADIUS_OPTIONS.find((r) => r.id === designTokens.borderRadius)?.name ?? designTokens.borderRadius;
+        const spacingName = SPACING_OPTIONS.find((s) => s.id === designTokens.spacing)?.name ?? designTokens.spacing;
+        const layoutName = LAYOUT_OPTIONS.find((l) => l.id === designTokens.layout)?.name ?? designTokens.layout;
+
+        return `너는 전문 웹 개발자야. ${templateName} 템플릿을 기반으로 사이트를 만들어줘.
+
+## 스타일
+- 레이아웃 스타일: "${styleName}"
+- 메인 컬러: ${selectedColor}
+- 폰트: ${fontName}
+- 모서리: ${radiusName}
+- 여백: ${spacingName}
+- 레이아웃: ${layoutName}
+
+## 페이지 섹션 구성 (위→아래 순서)
+- ${sectionNames}
+
+## 필수 기능
+${featureStr}
+
+위 구성을 정확히 반영해서 모든 섹션을 포함한 완성된 웹사이트를 만들어줘.`;
     },
 
     /* ── Run Sequence: WebSocket + API 호출 ── */

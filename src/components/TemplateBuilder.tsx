@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import SectionBuilder from "@/components/SectionBuilder";
 import {
     Check,
     Sparkles,
@@ -383,6 +384,11 @@ export default function TemplateBuilder() {
                             );
                         })}
                     </div>
+                </div>
+
+                {/* ── Section Builder + Design Tokens ── */}
+                <div className="p-4 border-b border-white/[0.06]">
+                    <SectionBuilder />
                 </div>
 
                 {/* ── AI 모델 선택 ── */}
