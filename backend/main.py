@@ -18,8 +18,9 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
+from pathlib import Path
 
-load_dotenv()
+load_dotenv(Path(__file__).parent / ".env", override=True)
 
 # ──────────────────────────────────────────────
 # 구조화된 로깅 설정

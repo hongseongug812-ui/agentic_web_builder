@@ -13,7 +13,7 @@ export interface AgentState {
 export interface DebateMessage {
     agent: string;
     round: number;
-    message_type: "plan" | "review" | "revision" | "approval" | "code" | "be_code";
+    message_type: "plan" | "review" | "be_review" | "revision" | "approval" | "code" | "be_code" | "qa_pass" | "qa_fail";
     content: string;
     data?: Record<string, unknown>;
 }
@@ -196,12 +196,30 @@ export interface StyleItem {
 }
 
 export const STYLES_MAP: Record<string, StyleItem[]> = {
-    search: [
-        { id: "dropdown", name: "드롭다운 검색", thumbnail: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=200&q=80" },
-        { id: "autocomplete", name: "자동완성 검색", thumbnail: "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=200&q=80" },
-        { id: "command-palette", name: "커맨드 팔레트 (⌘K)", thumbnail: "https://images.unsplash.com/photo-1629654297299-c8506221ca97?w=200&q=80" },
-        { id: "minimal-bar", name: "미니멀 검색바", thumbnail: "https://images.unsplash.com/photo-1487017159836-4e23ece2e4cf?w=200&q=80" },
-        { id: "filter-search", name: "필터 검색", thumbnail: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=200&q=80" },
+    "campus-hub": [
+        { id: "info-portal", name: "정보 포털", thumbnail: "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=200&q=80" },
+        { id: "event-hero", name: "이벤트 히어로", thumbnail: "https://images.unsplash.com/photo-1523050854058-8df90110c476?w=200&q=80" },
+        { id: "card-directory", name: "카드 디렉토리", thumbnail: "https://images.unsplash.com/photo-1562774053-701939374585?w=200&q=80" },
+        { id: "timeline-feed", name: "타임라인 피드", thumbnail: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=200&q=80" },
+    ],
+    "mine-portfolio": [
+        { id: "gallery-grid", name: "갤러리 그리드", thumbnail: "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=200&q=80" },
+        { id: "timeline", name: "타임라인", thumbnail: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=200&q=80" },
+        { id: "one-page", name: "원페이지 스크롤", thumbnail: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=200&q=80" },
+        { id: "case-study", name: "케이스 스터디", thumbnail: "https://images.unsplash.com/photo-1542744094-3a31f272c490?w=200&q=80" },
+        { id: "interactive-3d", name: "인터랙티브 3D", thumbnail: "https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=200&q=80" },
+    ],
+    construction: [
+        { id: "corporate-hero", name: "기업형 히어로", thumbnail: "https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=200&q=80" },
+        { id: "project-showcase", name: "프로젝트 쇼케이스", thumbnail: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=200&q=80" },
+        { id: "full-width-banner", name: "전체 너비 배너", thumbnail: "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=200&q=80" },
+        { id: "stats-focus", name: "수치 중심", thumbnail: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=200&q=80" },
+    ],
+    atelier: [
+        { id: "card-grid", name: "카드 그리드", thumbnail: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=200&q=80" },
+        { id: "carousel-slider", name: "캐러셀 슬라이더", thumbnail: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=200&q=80" },
+        { id: "single-product", name: "싱글 상품 포커스", thumbnail: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200&q=80" },
+        { id: "marketplace", name: "마켓플레이스", thumbnail: "https://images.unsplash.com/photo-1556740758-90de374c12ad?w=200&q=80" },
     ],
     saas: [
         { id: "hero-cta", name: "히어로 + CTA", thumbnail: "https://images.unsplash.com/photo-1467232004584-a241de8bcf5d?w=200&q=80" },
@@ -210,19 +228,29 @@ export const STYLES_MAP: Record<string, StyleItem[]> = {
         { id: "video-bg", name: "비디오 배경", thumbnail: "https://images.unsplash.com/photo-1536240478700-b869070f9279?w=200&q=80" },
         { id: "scroll-story", name: "스크롤 스토리", thumbnail: "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=200&q=80" },
     ],
-    shop: [
-        { id: "card-grid", name: "카드 그리드", thumbnail: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=200&q=80" },
-        { id: "carousel-slider", name: "캐러셀 슬라이더", thumbnail: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=200&q=80" },
-        { id: "mega-menu", name: "카테고리 메가메뉴", thumbnail: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=200&q=80" },
-        { id: "single-product", name: "싱글 상품 포커스", thumbnail: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200&q=80" },
-        { id: "marketplace", name: "마켓플레이스", thumbnail: "https://images.unsplash.com/photo-1556740758-90de374c12ad?w=200&q=80" },
+    "cafe-bistro": [
+        { id: "warm-hero", name: "따뜻한 히어로", thumbnail: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=200&q=80" },
+        { id: "menu-grid", name: "메뉴 그리드", thumbnail: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=200&q=80" },
+        { id: "gallery-mood", name: "갤러리 무드", thumbnail: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=200&q=80" },
+        { id: "reservation-focus", name: "예약 중심", thumbnail: "https://images.unsplash.com/photo-1453614512568-c4024d13c247?w=200&q=80" },
     ],
-    portfolio: [
-        { id: "gallery-grid", name: "갤러리 그리드", thumbnail: "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=200&q=80" },
-        { id: "timeline", name: "타임라인", thumbnail: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=200&q=80" },
-        { id: "one-page", name: "원페이지 스크롤", thumbnail: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=200&q=80" },
-        { id: "case-study", name: "케이스 스터디", thumbnail: "https://images.unsplash.com/photo-1542744094-3a31f272c490?w=200&q=80" },
-        { id: "interactive-3d", name: "인터랙티브 3D", thumbnail: "https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=200&q=80" },
+    "crave-academy": [
+        { id: "course-grid", name: "코스 그리드", thumbnail: "https://images.unsplash.com/photo-1501504905252-473c47e087f8?w=200&q=80" },
+        { id: "platform-hero", name: "플랫폼 히어로", thumbnail: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=200&q=80" },
+        { id: "instructor-focus", name: "강사 중심", thumbnail: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=200&q=80" },
+        { id: "dashboard-learn", name: "대시보드 학습", thumbnail: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=200&q=80" },
+    ],
+    "student-portfolio": [
+        { id: "minimal-clean", name: "미니멀 클린", thumbnail: "https://images.unsplash.com/photo-1545235617-9465d2a55698?w=200&q=80" },
+        { id: "dark-creative", name: "다크 크리에이티브", thumbnail: "https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=200&q=80" },
+        { id: "resume-style", name: "이력서 스타일", thumbnail: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=200&q=80" },
+        { id: "project-cards", name: "프로젝트 카드", thumbnail: "https://images.unsplash.com/photo-1542744094-3a31f272c490?w=200&q=80" },
+    ],
+    "fashion-mall": [
+        { id: "lookbook", name: "룩북 스타일", thumbnail: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=200&q=80" },
+        { id: "brand-story", name: "브랜드 스토리", thumbnail: "https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=200&q=80" },
+        { id: "product-grid", name: "상품 그리드", thumbnail: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=200&q=80" },
+        { id: "mega-menu", name: "메가메뉴", thumbnail: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=200&q=80" },
     ],
     blog: [
         { id: "magazine", name: "매거진 레이아웃", thumbnail: "https://images.unsplash.com/photo-1504711434969-e33886168d6c?w=200&q=80" },
@@ -237,6 +265,12 @@ export const STYLES_MAP: Record<string, StyleItem[]> = {
         { id: "chart-focus", name: "차트 중심", thumbnail: "https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?w=200&q=80" },
         { id: "kanban", name: "칸반 보드", thumbnail: "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=200&q=80" },
         { id: "sidebar-nav", name: "사이드바 내비게이션", thumbnail: "https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=200&q=80" },
+    ],
+    "hair-salon": [
+        { id: "elegant-booking", name: "엘레강스 예약", thumbnail: "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=200&q=80" },
+        { id: "stylist-showcase", name: "스타일리스트 쇼케이스", thumbnail: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=200&q=80" },
+        { id: "gallery-before-after", name: "비포&애프터 갤러리", thumbnail: "https://images.unsplash.com/photo-1559599101-f09722fb4948?w=200&q=80" },
+        { id: "price-menu", name: "가격 메뉴", thumbnail: "https://images.unsplash.com/photo-1521590832167-7228f0735720?w=200&q=80" },
     ],
 };
 
@@ -407,9 +441,12 @@ interface FlowStore {
 
 const defaultAgents: AgentState[] = [
     { id: "user-input", name: "사용자 입력", role: "user", status: "idle" },
-    { id: "pm-agent", name: "PM 에이전트", role: "pm", status: "idle" },
-    { id: "frontend-agent", name: "Frontend 에이전트", role: "frontend", status: "idle" },
-    { id: "backend-agent", name: "Backend 에이전트", role: "backend", status: "idle" },
+    { id: "cto-agent", name: "🧑‍💼 CTO", role: "pm", status: "idle" },
+    { id: "fe-lead-agent", name: "👨‍💻 FE Lead", role: "frontend", status: "idle" },
+    { id: "fe-dev-agent", name: "👩‍💻 FE Dev", role: "frontend", status: "idle" },
+    { id: "be-lead-agent", name: "🔧 BE Lead", role: "backend", status: "idle" },
+    { id: "be-dev-agent", name: "🔩 BE Dev", role: "backend", status: "idle" },
+    { id: "qa-agent", name: "🔍 QA", role: "pm", status: "idle" },
 ];
 
 const defaultStyleHistory: Record<string, string> = Object.fromEntries(
@@ -454,7 +491,7 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
 
     /* Pipeline Progress */
     pipelineStep: 0,
-    pipelineTotal: 6,
+    pipelineTotal: 20,
     pipelineLabel: "",
     retryAvailable: false,
 
@@ -508,7 +545,7 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
     })),
 
     /* ── LLM Provider ── */
-    selectedProvider: "gemini",
+    selectedProvider: "gpt",
     availableProviders: [],
     setProvider: (p) => set({ selectedProvider: p }),
     fetchProviders: async () => {
@@ -533,38 +570,140 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
         const enabledFeatures = (Object.entries(features) as [FeatureName, boolean][])
             .filter(([, v]) => v)
             .map(([k]) => k);
-        const featureStr = enabledFeatures.length > 0 ? enabledFeatures.join(", ") : "없음";
 
-        // 섹션 구성
-        const sectionNames = selectedSections
-            .map((id) => AVAILABLE_SECTIONS.find((s) => s.id === id))
-            .filter(Boolean)
-            .map((s) => `${s!.icon} ${s!.name} (${s!.description})`)
-            .join("\n- ");
+        // 섹션별 상세 스펙 매핑
+        const sectionSpecs: Record<string, string> = {
+            nav: `🧭 내비게이션 바:
+  - 고정 위치 (sticky/fixed), 스크롤 시 배경 불투명 전환
+  - 왼쪽: 로고 (그라데이션 텍스트 또는 아이콘), 오른쪽: 메뉴 링크 3~5개 + CTA 버튼
+  - 모바일: 햄버거 메뉴 → 슬라이드 패널
+  - 글래스모피즘 효과 (backdrop-blur, 반투명 배경)`,
 
-        // 디자인 토큰
+            hero: `🎯 히어로 섹션:
+  - 최소 화면 높이 (min-h-screen), 중앙 정렬
+  - 대형 제목 (text-5xl~7xl, 그라데이션 텍스트), 서브타이틀 (text-lg, text-gray-400)
+  - CTA 버튼 2개 (주요: 그라데이션 배경 + 아이콘, 보조: 아웃라인)
+  - 배경: 그라데이션 + 도트/그리드 패턴 또는 글로우 효과
+  - 스크롤 다운 인디케이터 애니메이션`,
+
+            features: `✨ 기능 소개:
+  - 3~4열 카드 그리드 (lg:grid-cols-3 또는 4)
+  - 각 카드: 아이콘 (이모지 또는 SVG) + 제목 + 설명 + hover 시 scale + shadow 변화
+  - 카드 배경: 글래스모피즘 (bg-white/5, border-white/10, backdrop-blur)
+  - 최소 6개 기능 항목 (의미 있는 내용으로)`,
+
+            about: `📝 소개 섹션:
+  - 2단 레이아웃: 좌측 이미지 (둥근 모서리) + 우측 텍스트
+  - 숫자 통계 포함 (예: "10년+ 경력", "200+ 프로젝트")
+  - 강조 텍스트에 그라데이션 색상`,
+
+            gallery: `🖼️ 갤러리:
+  - 메이슨리 또는 그리드 레이아웃 (3~4열)
+  - hover 시 오버레이 + 프로젝트 정보 표시
+  - 이미지 placeholder는 그라데이션 블록으로 대체`,
+
+            pricing: `💰 가격표:
+  - 3단 가격 카드 (기본/추천/프리미엄), 추천 카드에 강조 테두리 + "POPULAR" 뱃지
+  - 각 카드: 가격(큰 글씨) + 기능 목록(체크 아이콘) + CTA 버튼
+  - 월간/연간 토글 스위치`,
+
+            testimonials: `💬 고객 후기:
+  - 카드형 후기 3개 (아바타 + 이름 + 직함 + 인용문)
+  - 별점 표시 (★★★★★)
+  - 카드 배경 글래스모피즘, hover 시 살짝 확대`,
+
+            team: `👥 팀 소개:
+  - 프로필 카드 4열: 원형 아바타 + 이름 + 역할 + 소셜 링크 아이콘
+  - hover 시 카드 flip 또는 확대 + 소셜 아이콘 표시`,
+
+            stats: `📊 숫자 통계:
+  - 4열 큰 숫자 (text-4xl font-bold) + 라벨
+  - 그라데이션 숫자 텍스트 또는 카운트업 애니메이션 효과`,
+
+            faq: `❓ FAQ:
+  - 아코디언 UI (클릭 시 펼침/접힘)
+  - 좌우 2단 레이아웃: 좌측 섹션 제목 + 우측 질문/답변
+  - 최소 5개 질문 (의미 있는 Q&A 내용으로)`,
+
+            cta: `🚀 CTA 배너:
+  - 전체 너비 그라데이션 배경 (from-indigo-600 to-purple-600)
+  - 큰 제목 + 서브텍스트 + 흰색 CTA 버튼
+  - 배경에 미묘한 패턴 또는 글로우`,
+
+            contact: `📧 문의 폼:
+  - 2단: 좌측 연락처 정보 (주소, 전화, 이메일, 운영시간) + 우측 입력 폼
+  - 폼 필드: 이름, 이메일, 메시지(textarea), 전송 버튼
+  - 입력 필드에 focus 시 보더 색상 전환`,
+
+            "blog-list": `📰 블로그 목록:
+  - 3열 카드 그리드: 이미지(상단) + 카테고리 뱃지 + 제목 + 요약 + 날짜
+  - hover 시 이미지 확대 + shadow 증가
+  - "더 보기" 링크`,
+
+            footer: `🔻 푸터:
+  - 4열 그리드: 회사 소개 + 빠른 링크 + 서비스 + 소셜
+  - 소셜 미디어 아이콘 (인스타, 트위터, 깃허브 등)
+  - 하단: 수평 구분선 + 저작권 문구
+  - 배경: 가장 어둡게 (bg-gray-950)`,
+        };
+
+        // 색상별 상세 팔레트
+        const colorPalettes: Record<string, string> = {
+            Blue: "메인: blue-500/600, 배경: gray-950, 텍스트: white/gray-300, 액센트: cyan-400",
+            Dark: "메인: indigo-500/violet-500, 배경: gray-950/900, 텍스트: white/gray-400, 액센트: purple-400",
+            Neon: "메인: cyan-400/emerald-400, 배경: gray-950, 텍스트: white/gray-300, 액센트: pink-500, 네온 글로우 효과",
+            Sunset: "메인: orange-500/rose-500, 배경: gray-950, 텍스트: white/gray-300, 액센트: amber-400, 따뜻한 그라데이션",
+            Forest: "메인: emerald-500/teal-500, 배경: gray-950, 텍스트: white/gray-300, 액센트: lime-400, 자연 느낌",
+            "Minimal White": "메인: gray-900, 배경: white/gray-50, 텍스트: gray-900/gray-600, 액센트: blue-500, 깔끔한 라이트 모드",
+        };
+
+        // 디자인 토큰 상세 설명
         const fontName = FONT_OPTIONS.find((f) => f.id === designTokens.font)?.name ?? designTokens.font;
         const radiusName = RADIUS_OPTIONS.find((r) => r.id === designTokens.borderRadius)?.name ?? designTokens.borderRadius;
         const spacingName = SPACING_OPTIONS.find((s) => s.id === designTokens.spacing)?.name ?? designTokens.spacing;
         const layoutName = LAYOUT_OPTIONS.find((l) => l.id === designTokens.layout)?.name ?? designTokens.layout;
 
-        return `너는 전문 웹 개발자야. ${templateName} 템플릿을 기반으로 사이트를 만들어줘.
+        // 섹션 상세 스펙
+        const sectionDetails = selectedSections
+            .map((id) => sectionSpecs[id] || `- ${id}`)
+            .join("\n\n");
 
-## 스타일
+        // 기능 상세 스펙
+        const featureDetails = enabledFeatures.map((f) => {
+            const specs: Record<string, string> = {
+                "로그인": "로그인/회원가입 버튼 (네비게이션 바 우측), 모달 또는 별도 페이지",
+                "결제": "가격표 섹션 + 결제 CTA, 카드 UI 포함",
+                "검색": "네비게이션 바에 검색 아이콘 → 풀스크린 또는 드롭다운 검색 UI",
+                "다크모드": "다크 모드 기본, 토글 스위치로 라이트 모드 전환 가능",
+                "반응형": "모바일(1열) → 태블릿(2열) → 데스크톱(3~4열) 반응형 그리드",
+                "다국어": "언어 선택 드롭다운 (KO/EN), 네비게이션 바 우측",
+            };
+            return `- ${f}: ${specs[f] || f}`;
+        }).join("\n");
+
+        return `너는 전문 웹 개발자야. "${templateName}" 컨셉의 프리미엄 웹사이트를 만들어줘.
+
+## 디자인 시스템
 - 레이아웃 스타일: "${styleName}"
-- 메인 컬러: ${selectedColor}
-- 폰트: ${fontName}
+- 컬러 팔레트: ${colorPalettes[selectedColor] || selectedColor}
+- 폰트: ${fontName} (Google Fonts)
 - 모서리: ${radiusName}
-- 여백: ${spacingName}
-- 레이아웃: ${layoutName}
+- 여백: ${spacingName} (섹션 간 py-16~24, 내부 px-4~8)
+- 전체 레이아웃: ${layoutName}
 
-## 페이지 섹션 구성 (위→아래 순서)
-- ${sectionNames}
+## 전체 톤 & 무드
+- 프리미엄 & 현대적 느낌, 절대 단조롭거나 밋밋하지 않게
+- 모든 인터랙티브 요소에 hover 효과 (scale, shadow, color 전환)
+- 부드러운 transition-all duration-300
+- 그라데이션, 글래스모피즘, 미묘한 그림자를 적극 활용
 
-## 필수 기능
-${featureStr}
+## 페이지 섹션 (위→아래 순서, 모두 필수 구현)
 
-위 구성을 정확히 반영해서 모든 섹션을 포함한 완성된 웹사이트를 만들어줘.`;
+${sectionDetails}
+
+${enabledFeatures.length > 0 ? `## 추가 기능\n${featureDetails}` : ""}
+
+위 모든 섹션과 디자인 시스템을 정확히 반영해서 완성된 웹사이트를 만들어줘. 각 섹션에는 실제 의미 있는 텍스트 내용을 넣어. placeholder나 Lorem ipsum은 절대 사용하지 마.`;
     },
 
     /* ── Run Sequence: WebSocket + API 호출 ── */
@@ -619,9 +758,12 @@ ${featureStr}
 
                         // Pipeline progress tracking
                         const labelMap: Record<string, string> = {
-                            "pm-agent": data.action === "revising" ? `PM 기획서 수정 (R${data.round})` : "PM 기획서 작성",
-                            "frontend-agent": data.action === "reviewing" ? `FE 리뷰 (R${data.round})` : "FE 코드 생성",
-                            "backend-agent": "BE 코드 생성",
+                            "cto-agent": data.action === "revising" ? `CTO 기획서 수정 (R${data.round})` : "CTO 기획서 작성",
+                            "fe-lead-agent": data.action === "reviewing" ? `FE Lead 리뷰 (R${data.round})` : data.action === "generating" ? "FE Lead 코드 생성" : data.action === "revising" ? "FE Lead 코드 수정" : "FE Lead",
+                            "fe-dev-agent": data.action === "reviewing" ? `FE Dev 리뷰 (R${data.round})` : data.action === "code_review" ? "FE Dev 코드 리뷰" : "FE Dev",
+                            "be-lead-agent": data.action === "reviewing" ? `BE Lead 리뷰 (R${data.round})` : data.action === "generating" ? "BE Lead 코드 생성" : "BE Lead",
+                            "be-dev-agent": data.action === "reviewing" ? `BE Dev 리뷰 (R${data.round})` : "BE Dev",
+                            "qa-agent": "QA 최종 검수",
                         };
                         set((state) => ({
                             pipelineStep: state.pipelineStep + 0.5,
@@ -633,6 +775,21 @@ ${featureStr}
                     } else if (evtType === "debate_message" && data) {
                         set((state) => ({
                             debateMessages: [...state.debateMessages, data as DebateMessage],
+                        }));
+                    } else if (evtType === "code_revised" && data?.files) {
+                        // 수정된 코드를 store에 업데이트
+                        set((state) => ({
+                            agentOutputData: {
+                                ...state.agentOutputData,
+                                "frontend-agent": {
+                                    type: "generated_code",
+                                    data: { files: data.files, framework: "Next.js 14", summary: data.summary || "" },
+                                },
+                                "fe-lead-agent": {
+                                    type: "generated_code",
+                                    data: { files: data.files, framework: "Next.js 14", summary: data.summary || "" },
+                                },
+                            },
                         }));
                     } else if (evtType === "pipeline_complete") {
                         set({ isRunning: false, pipelineLabel: "완료", retryAvailable: false });
@@ -681,9 +838,12 @@ ${featureStr}
                         isRunning: false,
                         retryAvailable: true,
                     });
-                    setAgentStatus("pm-agent", "error");
-                    setAgentStatus("frontend-agent", "error");
-                    setAgentStatus("backend-agent", "error");
+                    setAgentStatus("cto-agent", "error");
+                    setAgentStatus("fe-lead-agent", "error");
+                    setAgentStatus("fe-dev-agent", "error");
+                    setAgentStatus("be-lead-agent", "error");
+                    setAgentStatus("be-dev-agent", "error");
+                    setAgentStatus("qa-agent", "error");
                     ws?.close();
                     return;
                 }
@@ -694,7 +854,7 @@ ${featureStr}
                 set((state) => ({
                     agentOutputData: {
                         ...state.agentOutputData,
-                        "pm-agent": {
+                        "cto-agent": {
                             type: "project_plan",
                             data: result.plan,
                             rounds: result.total_rounds,
@@ -703,7 +863,15 @@ ${featureStr}
                             type: "generated_code",
                             data: result.code,
                         },
+                        "fe-lead-agent": {
+                            type: "generated_code",
+                            data: result.code,
+                        },
                         "backend-agent": {
+                            type: "generated_code",
+                            data: result.backend_code,
+                        },
+                        "be-lead-agent": {
                             type: "generated_code",
                             data: result.backend_code,
                         },
@@ -712,18 +880,24 @@ ${featureStr}
                     isRunning: false,
                 }));
 
-                setAgentStatus("pm-agent", "done");
-                setAgentStatus("frontend-agent", "done");
-                setAgentStatus("backend-agent", result.backend_code ? "done" : "idle");
+                setAgentStatus("cto-agent", "done");
+                setAgentStatus("fe-lead-agent", "done");
+                setAgentStatus("fe-dev-agent", "done");
+                setAgentStatus("be-lead-agent", result.backend_code ? "done" : "idle");
+                setAgentStatus("be-dev-agent", result.backend_code ? "done" : "idle");
+                setAgentStatus("qa-agent", "done");
             } catch (err) {
                 set({
                     error: err instanceof Error ? err.message : "네트워크 오류",
                     isRunning: false,
                     retryAvailable: true,
                 });
-                setAgentStatus("pm-agent", "error");
-                setAgentStatus("frontend-agent", "error");
-                setAgentStatus("backend-agent", "error");
+                setAgentStatus("cto-agent", "error");
+                setAgentStatus("fe-lead-agent", "error");
+                setAgentStatus("fe-dev-agent", "error");
+                setAgentStatus("be-lead-agent", "error");
+                setAgentStatus("be-dev-agent", "error");
+                setAgentStatus("qa-agent", "error");
             } finally {
                 ws?.close();
             }

@@ -48,7 +48,7 @@ AVAILABLE_MODELS = {
 }
 
 # LLM 호출 타임아웃 (초)
-LLM_TIMEOUT = 120
+LLM_TIMEOUT = 300
 # JSON 파싱 재시도 횟수
 MAX_JSON_RETRIES = 2
 

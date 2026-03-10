@@ -36,10 +36,14 @@ const roleColors: Record<string, { accent: string; bg: string; border: string }>
 /* ── Message type labels ── */
 const messageTypeLabels: Record<string, { label: string; color: string }> = {
     plan: { label: "📋 기획서", color: "text-emerald-400" },
-    review: { label: "🔍 리뷰", color: "text-amber-400" },
+    review: { label: "🔍 FE 리뷰", color: "text-pink-400" },
+    be_review: { label: "🔧 BE 리뷰", color: "text-amber-400" },
     revision: { label: "✏️ 수정안", color: "text-blue-400" },
     approval: { label: "✅ 승인", color: "text-emerald-400" },
-    code: { label: "💻 코드 생성", color: "text-purple-400" },
+    code: { label: "💻 FE 코드 생성", color: "text-purple-400" },
+    be_code: { label: "🖥️ BE 코드 생성", color: "text-amber-400" },
+    qa_pass: { label: "✅ QA 검수 통과", color: "text-emerald-400" },
+    qa_fail: { label: "❌ QA 재검수 필요", color: "text-red-400" },
 };
 
 /* ── Status label ── */
@@ -79,23 +83,29 @@ function StatusLabel({ status }: { status: AgentStatus }) {
 /* ── Debate Message Bubble ── */
 function DebateBubble({ msg, index }: { msg: DebateMessage; index: number }) {
     const isPm = msg.agent === "pm";
+    const isBe = msg.agent === "backend";
     const typeInfo = messageTypeLabels[msg.message_type] || { label: msg.message_type, color: "text-white/50" };
+
+    // Determine alignment and style based on agent
+    const agentLabel = isPm ? "PM" : isBe ? "BE" : "FE";
+    const isLeft = isPm; // PM on left, FE and BE on right
+    const bubbleStyle = isPm
+        ? "bg-emerald-500/[0.06] border border-emerald-500/20 text-emerald-200/80 mr-6"
+        : isBe
+            ? "bg-amber-500/[0.06] border border-amber-500/20 text-amber-200/80 ml-6"
+            : "bg-pink-500/[0.06] border border-pink-500/20 text-pink-200/80 ml-6";
 
     return (
         <div
             className="animate-[fadeInUp_0.4s_ease-out] mb-3"
             style={{ animationDelay: `${index * 80}ms`, animationFillMode: "both" }}
         >
-            <div className={`flex items-center gap-1.5 mb-1 ${isPm ? "" : "justify-end"}`}>
+            <div className={`flex items-center gap-1.5 mb-1 ${isLeft ? "" : "justify-end"}`}>
                 <span className="text-[9px] text-white/30 font-mono">R{msg.round}</span>
                 <span className={`text-[10px] font-semibold ${typeInfo.color}`}>{typeInfo.label}</span>
-                <span className="text-[9px] text-white/20">{isPm ? "PM" : "FE"}</span>
+                <span className="text-[9px] text-white/20">{agentLabel}</span>
             </div>
-            <div className={`rounded-xl p-3 text-[11px] leading-relaxed ${
-                isPm
-                    ? "bg-emerald-500/[0.06] border border-emerald-500/20 text-emerald-200/80 mr-6"
-                    : "bg-pink-500/[0.06] border border-pink-500/20 text-pink-200/80 ml-6"
-            }`}>
+            <div className={`rounded-xl p-3 text-[11px] leading-relaxed ${bubbleStyle}`}>
                 {msg.content}
                 {msg.data && Array.isArray((msg.data as Record<string, unknown>).suggestions) && ((msg.data as Record<string, unknown>).suggestions as string[]).length > 0 && (
                     <ul className="mt-2 space-y-1">
@@ -127,6 +137,7 @@ export default function NodeDetailPanel() {
     const agentDebateMessages = debateMessages.filter((m) => {
         if (selectedAgent?.role === "pm") return m.agent === "pm";
         if (selectedAgent?.role === "frontend") return m.agent === "frontend";
+        if (selectedAgent?.role === "backend") return m.agent === "backend";
         return false;
     });
 
@@ -207,22 +218,20 @@ export default function NodeDetailPanel() {
                     <div className="flex border-b border-white/[0.06]">
                         <button
                             onClick={() => setActiveTab("output")}
-                            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[11px] font-medium transition-colors ${
-                                activeTab === "output"
-                                    ? "text-indigo-400 border-b-2 border-indigo-400"
-                                    : "text-white/30 hover:text-white/50"
-                            }`}
+                            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[11px] font-medium transition-colors ${activeTab === "output"
+                                ? "text-indigo-400 border-b-2 border-indigo-400"
+                                : "text-white/30 hover:text-white/50"
+                                }`}
                         >
                             <FileJson className="w-3 h-3" />
                             출력 데이터
                         </button>
                         <button
                             onClick={() => setActiveTab("debate")}
-                            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[11px] font-medium transition-colors ${
-                                activeTab === "debate"
-                                    ? "text-indigo-400 border-b-2 border-indigo-400"
-                                    : "text-white/30 hover:text-white/50"
-                            }`}
+                            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[11px] font-medium transition-colors ${activeTab === "debate"
+                                ? "text-indigo-400 border-b-2 border-indigo-400"
+                                : "text-white/30 hover:text-white/50"
+                                }`}
                         >
                             <MessagesSquare className="w-3 h-3" />
                             토론 로그

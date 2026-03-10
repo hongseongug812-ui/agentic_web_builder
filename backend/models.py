@@ -1,7 +1,13 @@
 """
 Pydantic 모델 정의
 ==================
-멀티 에이전트 토론 시스템의 요청/응답 스키마를 정의합니다.
+회사형 멀티 에이전트 토론 시스템의 요청/응답 스키마를 정의합니다.
+
+에이전트 구성:
+- CTO: 기획 총괄
+- FE_LEAD + FE_DEV: 프론트엔드 팀 (2인 토론)
+- BE_LEAD + BE_DEV: 백엔드 팀 (2인 토론)
+- QA: 품질 검수
 """
 
 from __future__ import annotations
@@ -16,18 +22,32 @@ from pydantic import BaseModel, Field, field_validator
 # 공통 Enum
 # ──────────────────────────────────────────────
 class AgentRole(str, Enum):
+    CTO = "cto"
+    FE_LEAD = "fe-lead"
+    FE_DEV = "fe-dev"
+    BE_LEAD = "be-lead"
+    BE_DEV = "be-dev"
+    QA = "qa"
+    # 이전 호환
     PM = "pm"
     FRONTEND = "frontend"
     BACKEND = "backend"
 
 
 class MessageType(str, Enum):
-    PLAN = "plan"           # PM이 기획서 제출
-    REVIEW = "review"       # FE가 기획서 리뷰
-    REVISION = "revision"   # PM이 수정안 제출
-    APPROVAL = "approval"   # FE가 승인
-    CODE = "code"           # FE가 코드 생성
-    BE_CODE = "be_code"     # BE가 코드 생성
+    PLAN = "plan"               # CTO가 기획서 제출
+    REVIEW = "review"           # 리뷰 의견
+    BE_REVIEW = "be_review"     # BE 리뷰 의견
+    REVISION = "revision"       # CTO가 수정안 제출
+    APPROVAL = "approval"       # 승인
+    CODE = "code"               # FE 코드 생성
+    BE_CODE = "be_code"         # BE 코드 생성
+    FE_DEBATE = "fe_debate"     # FE팀 내부 토론
+    BE_DEBATE = "be_debate"     # BE팀 내부 토론
+    CODE_REVIEW = "code_review" # 코드 리뷰
+    QA_PASS = "qa_pass"         # QA 검수 통과
+    QA_FAIL = "qa_fail"         # QA 검수 실패
+    USER_FEEDBACK = "user_feedback"  # 사용자 피드백
 
 
 ALLOWED_PROVIDERS = {"gemini", "claude", "gpt"}
@@ -70,8 +90,14 @@ class OrchestrateRequest(BaseModel):
         return v
 
 
+class RevisionRequest(BaseModel):
+    """사용자 수정 요청"""
+    feedback: str = Field(..., min_length=1, max_length=5000, description="사용자 수정 요청사항")
+    provider: str = Field(default="gpt")
+
+
 # ──────────────────────────────────────────────
-# PM 에이전트 출력
+# PM(CTO) 에이전트 출력
 # ──────────────────────────────────────────────
 class PageComponent(BaseModel):
     name: str
@@ -91,17 +117,17 @@ class ApiEndpointSpec(BaseModel):
 
 
 class ProjectPlan(BaseModel):
-    """PM 에이전트가 반환하는 기획서"""
+    """CTO 에이전트가 반환하는 기획서"""
     pages: list[PageSpec]
     api_endpoints: list[ApiEndpointSpec]
     db_schema: list[str]
 
 
 # ──────────────────────────────────────────────
-# FE 에이전트 출력
+# 코드 에이전트 출력
 # ──────────────────────────────────────────────
 class ReviewResult(BaseModel):
-    """FE 에이전트의 리뷰 결과"""
+    """리뷰 결과"""
     approved: bool
     feedback: str
     suggestions: list[str] = []
@@ -115,7 +141,7 @@ class GeneratedFile(BaseModel):
 
 
 class FrontendCode(BaseModel):
-    """FE 에이전트의 최종 코드 출력"""
+    """코드 에이전트의 최종 코드 출력"""
     framework: str = "Next.js 14"
     files: list[GeneratedFile]
     summary: str = ""

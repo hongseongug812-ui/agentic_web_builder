@@ -25,65 +25,135 @@ const initialNodes: Node[] = [
     {
         id: "user-input",
         type: "agentNode",
-        position: { x: 50, y: 200 },
+        position: { x: 30, y: 220 },
         data: { label: "사용자 입력", role: "user", agentId: "user-input" },
     },
     {
-        id: "pm-agent",
+        id: "cto-agent",
         type: "agentNode",
-        position: { x: 320, y: 200 },
-        data: { label: "PM 에이전트", role: "pm", agentId: "pm-agent" },
+        position: { x: 250, y: 220 },
+        data: { label: "🧑‍💼 CTO", role: "pm", agentId: "cto-agent" },
     },
     {
-        id: "frontend-agent",
+        id: "fe-lead-agent",
         type: "agentNode",
-        position: { x: 590, y: 100 },
-        data: { label: "Frontend 에이전트", role: "frontend", agentId: "frontend-agent" },
+        position: { x: 490, y: 80 },
+        data: { label: "👨‍💻 FE Lead", role: "frontend", agentId: "fe-lead-agent" },
     },
     {
-        id: "backend-agent",
+        id: "fe-dev-agent",
         type: "agentNode",
-        position: { x: 590, y: 300 },
-        data: { label: "Backend 에이전트", role: "backend", agentId: "backend-agent" },
+        position: { x: 710, y: 80 },
+        data: { label: "👩‍💻 FE Dev", role: "frontend", agentId: "fe-dev-agent" },
+    },
+    {
+        id: "be-lead-agent",
+        type: "agentNode",
+        position: { x: 490, y: 360 },
+        data: { label: "🔧 BE Lead", role: "backend", agentId: "be-lead-agent" },
+    },
+    {
+        id: "be-dev-agent",
+        type: "agentNode",
+        position: { x: 710, y: 360 },
+        data: { label: "🔩 BE Dev", role: "backend", agentId: "be-dev-agent" },
+    },
+    {
+        id: "qa-agent",
+        type: "agentNode",
+        position: { x: 930, y: 220 },
+        data: { label: "🔍 QA", role: "pm", agentId: "qa-agent" },
     },
 ];
 
 const baseEdges: Edge[] = [
+    // User → CTO
     {
-        id: "e-user-pm",
+        id: "e-user-cto",
         source: "user-input",
-        target: "pm-agent",
+        target: "cto-agent",
         type: "letterEdge",
         animated: false,
         style: { stroke: "rgba(99, 102, 241, 0.4)", strokeWidth: 2 },
         data: { sourceAgentId: "user-input" },
     },
+    // CTO → FE Lead
     {
-        id: "e-pm-frontend",
-        source: "pm-agent",
-        target: "frontend-agent",
+        id: "e-cto-fe-lead",
+        source: "cto-agent",
+        target: "fe-lead-agent",
         type: "letterEdge",
         animated: false,
         style: { stroke: "rgba(16, 185, 129, 0.4)", strokeWidth: 2 },
-        data: { sourceAgentId: "pm-agent" },
+        data: { sourceAgentId: "cto-agent" },
     },
+    // CTO → BE Lead
     {
-        id: "e-pm-backend",
-        source: "pm-agent",
-        target: "backend-agent",
+        id: "e-cto-be-lead",
+        source: "cto-agent",
+        target: "be-lead-agent",
         type: "letterEdge",
         animated: false,
         style: { stroke: "rgba(251, 191, 36, 0.4)", strokeWidth: 2 },
-        data: { sourceAgentId: "pm-agent" },
+        data: { sourceAgentId: "cto-agent" },
+    },
+    // FE Lead ↔ FE Dev (토론)
+    {
+        id: "e-fe-lead-dev",
+        source: "fe-lead-agent",
+        target: "fe-dev-agent",
+        type: "letterEdge",
+        animated: false,
+        style: { stroke: "rgba(244, 114, 182, 0.4)", strokeWidth: 2 },
+        data: { sourceAgentId: "fe-lead-agent" },
     },
     {
-        id: "e-frontend-pm",
-        source: "frontend-agent",
-        target: "pm-agent",
+        id: "e-fe-dev-lead",
+        source: "fe-dev-agent",
+        target: "fe-lead-agent",
         type: "letterEdge",
         animated: false,
         style: { stroke: "rgba(244, 114, 182, 0.3)", strokeWidth: 2, strokeDasharray: "6 4" },
-        data: { sourceAgentId: "frontend-agent", isReview: true },
+        data: { sourceAgentId: "fe-dev-agent", isReview: true },
+    },
+    // BE Lead ↔ BE Dev (토론)
+    {
+        id: "e-be-lead-dev",
+        source: "be-lead-agent",
+        target: "be-dev-agent",
+        type: "letterEdge",
+        animated: false,
+        style: { stroke: "rgba(251, 191, 36, 0.4)", strokeWidth: 2 },
+        data: { sourceAgentId: "be-lead-agent" },
+    },
+    {
+        id: "e-be-dev-lead",
+        source: "be-dev-agent",
+        target: "be-lead-agent",
+        type: "letterEdge",
+        animated: false,
+        style: { stroke: "rgba(251, 191, 36, 0.3)", strokeWidth: 2, strokeDasharray: "6 4" },
+        data: { sourceAgentId: "be-dev-agent", isReview: true },
+    },
+    // FE Lead → QA
+    {
+        id: "e-fe-lead-qa",
+        source: "fe-lead-agent",
+        target: "qa-agent",
+        type: "letterEdge",
+        animated: false,
+        style: { stroke: "rgba(139, 92, 246, 0.4)", strokeWidth: 2 },
+        data: { sourceAgentId: "fe-lead-agent" },
+    },
+    // BE Lead → QA
+    {
+        id: "e-be-lead-qa",
+        source: "be-lead-agent",
+        target: "qa-agent",
+        type: "letterEdge",
+        animated: false,
+        style: { stroke: "rgba(139, 92, 246, 0.4)", strokeWidth: 2 },
+        data: { sourceAgentId: "be-lead-agent" },
     },
 ];
 
@@ -94,62 +164,24 @@ export default function FlowCanvas() {
     const agents = useFlowStore((s) => s.agents);
 
     useEffect(() => {
-        const pmAgent = agents.find((a) => a.id === "pm-agent");
-        const feAgent = agents.find((a) => a.id === "frontend-agent");
-        const beAgent = agents.find((a) => a.id === "backend-agent");
-        const userAgent = agents.find((a) => a.id === "user-input");
+        const agentMap = Object.fromEntries(agents.map((a) => [a.id, a]));
 
         setEdges((eds) =>
             eds.map((edge) => {
-                if (edge.id === "e-user-pm") {
-                    const active = userAgent?.status === "done" && pmAgent?.status === "working";
-                    return {
-                        ...edge,
-                        animated: active,
-                        style: {
-                            ...edge.style,
-                            stroke: active ? "rgba(99, 102, 241, 0.8)" : "rgba(99, 102, 241, 0.4)",
-                            strokeWidth: active ? 3 : 2,
-                        },
-                    };
-                }
-                if (edge.id === "e-pm-frontend") {
-                    const active = pmAgent?.status === "done" && feAgent?.status === "working";
-                    return {
-                        ...edge,
-                        animated: active,
-                        style: {
-                            ...edge.style,
-                            stroke: active ? "rgba(16, 185, 129, 0.8)" : "rgba(16, 185, 129, 0.4)",
-                            strokeWidth: active ? 3 : 2,
-                        },
-                    };
-                }
-                if (edge.id === "e-pm-backend") {
-                    const active = pmAgent?.status === "done" && beAgent?.status === "working";
-                    return {
-                        ...edge,
-                        animated: active,
-                        style: {
-                            ...edge.style,
-                            stroke: active ? "rgba(251, 191, 36, 0.8)" : "rgba(251, 191, 36, 0.4)",
-                            strokeWidth: active ? 3 : 2,
-                        },
-                    };
-                }
-                if (edge.id === "e-frontend-pm") {
-                    const active = feAgent?.status === "done" && pmAgent?.status === "working";
-                    return {
-                        ...edge,
-                        animated: active,
-                        style: {
-                            ...edge.style,
-                            stroke: active ? "rgba(244, 114, 182, 0.7)" : "rgba(244, 114, 182, 0.3)",
-                            strokeWidth: active ? 3 : 2,
-                        },
-                    };
-                }
-                return edge;
+                const sourceAgent = agentMap[edge.source];
+                const targetAgent = agentMap[edge.target];
+                const active = sourceAgent?.status === "done" && targetAgent?.status === "working";
+                const baseStroke = (edge.style?.stroke as string) || "rgba(99, 102, 241, 0.4)";
+                const brightStroke = baseStroke.replace(/[\d.]+\)$/, "0.8)");
+                return {
+                    ...edge,
+                    animated: active,
+                    style: {
+                        ...edge.style,
+                        stroke: active ? brightStroke : baseStroke,
+                        strokeWidth: active ? 3 : 2,
+                    },
+                };
             })
         );
     }, [agents, setEdges]);
