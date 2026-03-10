@@ -45,6 +45,7 @@ class MessageType(str, Enum):
     FE_DEBATE = "fe_debate"     # FE팀 내부 토론
     BE_DEBATE = "be_debate"     # BE팀 내부 토론
     CODE_REVIEW = "code_review" # 코드 리뷰
+    CROSS_TEAM = "cross_team"   # FE↔BE 크로스팀 소통
     QA_PASS = "qa_pass"         # QA 검수 통과
     QA_FAIL = "qa_fail"         # QA 검수 실패
     USER_FEEDBACK = "user_feedback"  # 사용자 피드백

@@ -15,23 +15,29 @@ import {
     ChevronLeft,
     Rocket,
     Pencil,
+    Zap,
+    Flame,
+    Star,
 } from "lucide-react";
 import {
     useFlowStore,
     TEMPLATES,
+    TEMPLATE_CATEGORIES,
     getStylesForTemplate,
     colorOptions,
     featureOptions,
     ColorName,
     FeatureName,
+    COLOR_PALETTE,
     AVAILABLE_SECTIONS,
     FONT_OPTIONS,
     RADIUS_OPTIONS,
     SPACING_OPTIONS,
     LAYOUT_OPTIONS,
+    ANIMATION_OPTIONS,
 } from "@/store/store";
 
-/* ── Color swatches ── */
+/* ── Color swatches (legacy fallback) ── */
 const colorSwatches: Record<string, string> = {
     Blue: "#3b82f6",
     Dark: "#1e1e2e",
@@ -39,6 +45,10 @@ const colorSwatches: Record<string, string> = {
     Sunset: "#f97316",
     Forest: "#22c55e",
     "Minimal White": "#f8fafc",
+    Ocean: "#0ea5e9",
+    Cherry: "#e11d48",
+    Lavender: "#a78bfa",
+    Cyber: "#facc15",
 };
 
 /* ── Feature icons ── */
@@ -51,18 +61,36 @@ const featureIcons: Record<string, React.ReactNode> = {
     다국어: <Globe className="w-4 h-4" />,
 };
 
+/* ── Badge Config ── */
+const badgeConfig: Record<string, { bg: string; text: string; icon: React.ReactNode }> = {
+    HOT: { bg: "bg-gradient-to-r from-orange-500 to-red-500", text: "text-white", icon: <Flame className="w-2.5 h-2.5" /> },
+    NEW: { bg: "bg-gradient-to-r from-emerald-500 to-teal-500", text: "text-white", icon: <Zap className="w-2.5 h-2.5" /> },
+    "AI추천": { bg: "bg-gradient-to-r from-purple-500 to-indigo-500", text: "text-white", icon: <Star className="w-2.5 h-2.5" /> },
+};
+
+/* ── Animation icons ── */
+const animationIcons: Record<string, string> = {
+    none: "⏹️",
+    subtle: "🌊",
+    dynamic: "⚡",
+    playful: "🎪",
+};
+
 const STEPS = [
     { id: "type", title: "웹사이트 종류", question: "어떤 웹사이트를 만들고 싶으세요?", desc: "AI가 만들 사이트의 컨셉을 선택하세요" },
     { id: "style", title: "스타일", question: "어떤 스타일이 좋으세요?", desc: "선택한 종류에 맞는 레이아웃 스타일" },
     { id: "color", title: "테마 컬러", question: "색상 분위기를 골라주세요", desc: "전체 사이트의 컬러 톤을 결정합니다" },
     { id: "sections", title: "섹션 구성", question: "어떤 섹션이 필요하세요?", desc: "페이지를 구성할 블록들을 선택하세요" },
     { id: "features", title: "추가 기능", question: "필요한 기능을 선택하세요", desc: "사이트에 넣을 기능을 토글하세요" },
-    { id: "design", title: "디자인 세팅", question: "세부 디자인을 설정하세요", desc: "폰트, 모서리, 여백, AI 모델 선택" },
+    { id: "design", title: "디자인 세팅", question: "세부 디자인을 설정하세요", desc: "폰트, 모서리, 여백, 애니메이션, AI 모델 선택" },
     { id: "prompt", title: "최종 확인", question: "프롬프트를 확인하고 시작하세요!", desc: "AI에게 전달할 전체 지시를 확인합니다" },
 ] as const;
 
 export default function TemplateBuilder() {
     const [step, setStep] = useState(0);
+    const [slideDir, setSlideDir] = useState<"left" | "right">("right");
+    const [isSliding, setIsSliding] = useState(false);
+    const [categoryFilter, setCategoryFilter] = useState("전체");
     const selectedTemplateId = useFlowStore((s) => s.selectedTemplateId);
     const selectedStyleId = useFlowStore((s) => s.selectedStyleId);
     const selectedColor = useFlowStore((s) => s.selectedColor);
@@ -101,9 +129,24 @@ export default function TemplateBuilder() {
     const styleOptions = getStylesForTemplate(selectedTemplateId);
     const currentStep = STEPS[step];
 
+    // 카테고리 필터링된 템플릿
+    const filteredTemplates = categoryFilter === "전체"
+        ? TEMPLATES
+        : TEMPLATES.filter((t) => t.category === categoryFilter);
+
     function handleStart() {
         if (isRunning) return;
         runSequence();
+    }
+
+    function goToStep(next: number) {
+        if (next === step || next < 0 || next >= STEPS.length) return;
+        setSlideDir(next > step ? "right" : "left");
+        setIsSliding(true);
+        setTimeout(() => {
+            setStep(next);
+            setIsSliding(false);
+        }, 150);
     }
 
     /* ── Step content ── */
@@ -111,28 +154,62 @@ export default function TemplateBuilder() {
         switch (currentStep.id) {
             case "type":
                 return (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                        {TEMPLATES.map((t) => {
-                            const sel = selectedTemplateId === t.id;
-                            return (
-                                <button key={t.id} onClick={() => setTemplate(t.id)}
-                                    className={`group relative rounded-2xl overflow-hidden text-left transition-all duration-200
-                                        ${sel ? "ring-2 ring-indigo-500 shadow-xl shadow-indigo-500/20 -translate-y-1" : "ring-1 ring-white/[0.08] hover:ring-white/20 hover:-translate-y-1 hover:shadow-xl"}`}
+                    <div>
+                        {/* Category Filter Tabs */}
+                        <div className="flex items-center gap-1.5 mb-5 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+                            {TEMPLATE_CATEGORIES.map((cat) => (
+                                <button key={cat} onClick={() => setCategoryFilter(cat)}
+                                    className={`px-3.5 py-1.5 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all duration-200
+                                        ${categoryFilter === cat
+                                            ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 shadow-sm shadow-indigo-500/10"
+                                            : "text-white/30 border border-transparent hover:text-white/50 hover:bg-white/[0.03]"}`}
                                 >
-                                    <div className="relative h-[120px] overflow-hidden bg-white/[0.03]">
-                                        <img src={t.thumbnail} alt={t.name} className={`w-full h-full object-cover transition-all duration-300 ${sel ? "scale-110" : "group-hover:scale-110"}`} />
-                                        <div className={`absolute inset-0 transition-all ${sel ? "bg-black/20" : "bg-black/50 group-hover:bg-black/20"}`} />
-                                        {sel && <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center shadow-lg"><Check className="w-3.5 h-3.5 text-white" /></div>}
-                                        <div className="absolute bottom-0 left-0 right-0 px-3 pb-2 pt-8 bg-gradient-to-t from-black/80 to-transparent">
-                                            <p className={`text-xs font-bold ${sel ? "text-indigo-300" : "text-white/80"}`}>{t.name}</p>
-                                        </div>
-                                    </div>
-                                    <div className={`px-3 py-2 ${sel ? "bg-indigo-500/[0.08]" : "bg-white/[0.02]"}`}>
-                                        <p className={`text-[10px] line-clamp-1 ${sel ? "text-indigo-300/60" : "text-white/30"}`}>{t.description}</p>
-                                    </div>
+                                    {cat}
                                 </button>
-                            );
-                        })}
+                            ))}
+                            <span className="ml-auto text-[10px] text-white/15 flex-shrink-0">{filteredTemplates.length}개</span>
+                        </div>
+                        {/* Template Grid */}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {filteredTemplates.map((t) => {
+                                const sel = selectedTemplateId === t.id;
+                                const badge = t.badge ? badgeConfig[t.badge] : null;
+                                return (
+                                    <button key={t.id} onClick={() => setTemplate(t.id)}
+                                        className={`group relative rounded-2xl overflow-hidden text-left transition-all duration-300
+                                            ${sel
+                                                ? "ring-2 ring-indigo-500 shadow-xl shadow-indigo-500/20 -translate-y-1 scale-[1.02]"
+                                                : "ring-1 ring-white/[0.08] hover:ring-white/20 hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-black/40"}`}
+                                    >
+                                        <div className="relative h-[140px] overflow-hidden bg-white/[0.03]">
+                                            <img src={t.thumbnail} alt={t.name}
+                                                className={`w-full h-full object-cover transition-all duration-500 ${sel ? "scale-110" : "group-hover:scale-115"}`}
+                                            />
+                                            <div className={`absolute inset-0 transition-all duration-300 ${sel ? "bg-black/20" : "bg-black/50 group-hover:bg-black/20"}`} />
+                                            {/* Badge */}
+                                            {badge && (
+                                                <div className={`absolute top-2 left-2 ${badge.bg} ${badge.text} px-2 py-0.5 rounded-full text-[9px] font-bold flex items-center gap-0.5 shadow-lg`}>
+                                                    {badge.icon} {t.badge}
+                                                </div>
+                                            )}
+                                            {/* Checkmark */}
+                                            {sel && (
+                                                <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center shadow-lg animate-[scale-in_0.2s_ease-out]">
+                                                    <Check className="w-3.5 h-3.5 text-white" />
+                                                </div>
+                                            )}
+                                            {/* Name overlay */}
+                                            <div className="absolute bottom-0 left-0 right-0 px-3 pb-2.5 pt-10 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+                                                <p className={`text-sm font-bold tracking-tight ${sel ? "text-indigo-300" : "text-white/90"}`}>{t.name}</p>
+                                            </div>
+                                        </div>
+                                        <div className={`px-3 py-2.5 ${sel ? "bg-indigo-500/[0.08]" : "bg-white/[0.02]"}`}>
+                                            <p className={`text-[10px] leading-relaxed line-clamp-2 ${sel ? "text-indigo-300/60" : "text-white/30"}`}>{t.description}</p>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
                 );
 
@@ -143,15 +220,15 @@ export default function TemplateBuilder() {
                             const sel = selectedStyleId === s.id;
                             return (
                                 <button key={s.id} onClick={() => setStyle(s.id)}
-                                    className={`group relative rounded-2xl overflow-hidden text-left transition-all duration-200
-                                        ${sel ? "ring-2 ring-purple-500 shadow-xl shadow-purple-500/20 -translate-y-1" : "ring-1 ring-white/[0.06] hover:ring-white/15 hover:-translate-y-1"}`}
+                                    className={`group relative rounded-2xl overflow-hidden text-left transition-all duration-300
+                                        ${sel ? "ring-2 ring-purple-500 shadow-xl shadow-purple-500/20 -translate-y-1" : "ring-1 ring-white/[0.06] hover:ring-white/15 hover:-translate-y-1.5"}`}
                                 >
-                                    <div className="relative h-[100px] overflow-hidden bg-white/[0.02]">
-                                        <img src={s.thumbnail} alt={s.name} className={`w-full h-full object-cover transition-all duration-300 ${sel ? "scale-110" : "group-hover:scale-110"}`} />
+                                    <div className="relative h-[110px] overflow-hidden bg-white/[0.02]">
+                                        <img src={s.thumbnail} alt={s.name} className={`w-full h-full object-cover transition-all duration-500 ${sel ? "scale-110" : "group-hover:scale-110"}`} />
                                         <div className={`absolute inset-0 ${sel ? "bg-black/20" : "bg-black/50 group-hover:bg-black/25"}`} />
                                         {sel && <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center"><Check className="w-3 h-3 text-white" /></div>}
                                     </div>
-                                    <div className={`px-3 py-2 ${sel ? "bg-purple-500/[0.08]" : "bg-white/[0.02]"}`}>
+                                    <div className={`px-3 py-2.5 ${sel ? "bg-purple-500/[0.08]" : "bg-white/[0.02]"}`}>
                                         <p className={`text-[11px] font-semibold truncate ${sel ? "text-purple-300" : "text-white/50"}`}>{s.name}</p>
                                     </div>
                                 </button>
@@ -162,24 +239,31 @@ export default function TemplateBuilder() {
 
             case "color":
                 return (
-                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-4 max-w-[600px]">
-                        {colorOptions.map((c) => (
-                            <button key={c} onClick={() => setColor(c as ColorName)}
-                                className={`group flex flex-col items-center gap-3 p-4 rounded-2xl transition-all duration-200
-                                    ${selectedColor === c ? "bg-white/[0.06] ring-2 ring-indigo-500 shadow-lg" : "bg-white/[0.02] ring-1 ring-white/[0.06] hover:bg-white/[0.05] hover:ring-white/15"}`}
-                            >
-                                <div className={`w-14 h-14 rounded-full transition-all duration-200 ${selectedColor === c ? "ring-3 ring-offset-2 ring-offset-gray-950 ring-indigo-400 scale-110" : "hover:scale-105"}`}
-                                    style={{ backgroundColor: colorSwatches[c] }}
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 max-w-[700px]">
+                        {COLOR_PALETTE.map((c) => {
+                            const sel = selectedColor === c.name;
+                            return (
+                                <button key={c.name} onClick={() => setColor(c.name)}
+                                    className={`group flex flex-col items-center gap-3 px-3 py-4 rounded-2xl transition-all duration-300
+                                        ${sel
+                                            ? "bg-white/[0.06] ring-2 ring-indigo-500 shadow-lg shadow-indigo-500/10 -translate-y-1"
+                                            : "bg-white/[0.02] ring-1 ring-white/[0.06] hover:bg-white/[0.05] hover:ring-white/15 hover:-translate-y-0.5"}`}
                                 >
-                                    {selectedColor === c && (
-                                        <div className="w-full h-full flex items-center justify-center">
-                                            <Check className="w-5 h-5" style={{ color: c === "Minimal White" || c === "Neon" ? "#000" : "#fff" }} />
-                                        </div>
-                                    )}
-                                </div>
-                                <span className={`text-xs font-medium ${selectedColor === c ? "text-white/80" : "text-white/35"}`}>{c}</span>
-                            </button>
-                        ))}
+                                    {/* Gradient circle */}
+                                    <div className={`w-14 h-14 rounded-full transition-all duration-300 shadow-lg
+                                        ${sel ? "ring-3 ring-offset-2 ring-offset-gray-950 ring-indigo-400 scale-110" : "group-hover:scale-110"}`}
+                                        style={{ background: `linear-gradient(135deg, ${c.from}, ${c.to})` }}
+                                    >
+                                        {sel && (
+                                            <div className="w-full h-full flex items-center justify-center">
+                                                <Check className="w-5 h-5" style={{ color: c.text }} />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <span className={`text-xs font-medium ${sel ? "text-white/80" : "text-white/35"}`}>{c.name}</span>
+                                </button>
+                            );
+                        })}
                     </div>
                 );
 
@@ -277,6 +361,27 @@ export default function TemplateBuilder() {
                                             ? "bg-indigo-500/15 border border-indigo-500/30 text-indigo-300" : "bg-white/[0.02] border border-white/[0.06] text-white/40 hover:bg-white/[0.04]"}`}
                                     >{l.name}</button>
                                 ))}
+                            </div>
+                        </div>
+                        {/* Animation */}
+                        <div className="md:col-span-2">
+                            <label className="text-[11px] font-medium text-white/40 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                                <Sparkles className="w-3 h-3" /> 애니메이션
+                            </label>
+                            <div className="grid grid-cols-4 gap-2 max-w-[500px]">
+                                {ANIMATION_OPTIONS.map((a) => {
+                                    const sel = designTokens.animation === a.id;
+                                    return (
+                                        <button key={a.id} onClick={() => setDesignToken("animation", a.id)}
+                                            className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl transition-all text-center
+                                                ${sel ? "bg-indigo-500/15 border border-indigo-500/30 shadow-sm" : "bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.04]"}`}
+                                        >
+                                            <span className="text-xl">{animationIcons[a.id]}</span>
+                                            <span className={`text-xs font-semibold ${sel ? "text-indigo-300" : "text-white/50"}`}>{a.name}</span>
+                                            <span className={`text-[9px] ${sel ? "text-indigo-400/60" : "text-white/20"}`}>{a.description}</span>
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
                         {/* AI Model */}
@@ -445,51 +550,101 @@ export default function TemplateBuilder() {
         }
     }
 
+    /* ── Selection summary chips ── */
+    const selectedTpl = TEMPLATES.find((t) => t.id === selectedTemplateId);
+    const summaryChips = [
+        selectedTpl ? selectedTpl.name : null,
+        selectedColor || null,
+        selectedSections.length > 0 ? `${selectedSections.length}개 섹션` : null,
+    ].filter(Boolean);
+
     /* ── Main render: full page ── */
     return (
         <div className="flex-1 flex flex-col overflow-hidden bg-gray-950">
             {/* Progress bar + step info */}
             <div className="px-8 pt-6 pb-4 flex-shrink-0">
-                {/* Progress dots */}
-                <div className="flex items-center gap-1.5 mb-4 max-w-[500px]">
+                {/* Progress dots with numbers */}
+                <div className="flex items-center gap-1 mb-5 max-w-[600px]">
                     {STEPS.map((s, i) => (
-                        <button key={s.id} onClick={() => setStep(i)}
-                            className={`flex-1 h-2 rounded-full transition-all duration-300 cursor-pointer hover:opacity-80
-                                ${i < step ? "bg-indigo-500" : i === step ? "bg-indigo-400" : "bg-white/[0.08]"}`}
-                            title={s.title}
-                        />
+                        <div key={s.id} className="flex-1 flex flex-col items-center gap-1.5">
+                            <button
+                                onClick={() => goToStep(i)}
+                                className={`w-7 h-7 rounded-full text-[10px] font-bold flex items-center justify-center transition-all duration-300 cursor-pointer
+                                    ${i < step
+                                        ? "bg-indigo-500 text-white shadow-sm shadow-indigo-500/30"
+                                        : i === step
+                                            ? "bg-indigo-400 text-white ring-2 ring-indigo-400/30 ring-offset-1 ring-offset-gray-950 shadow-lg shadow-indigo-500/20"
+                                            : "bg-white/[0.06] text-white/25 hover:bg-white/[0.1]"}`}
+                                title={s.title}
+                            >
+                                {i < step ? <Check className="w-3.5 h-3.5" /> : i + 1}
+                            </button>
+                            <span className={`text-[9px] font-medium transition-colors ${i <= step ? "text-white/50" : "text-white/15"}`}>
+                                {s.title}
+                            </span>
+                        </div>
                     ))}
                 </div>
-                <p className="text-[11px] text-white/25 mb-4">{step + 1}/{STEPS.length} · {currentStep.title}</p>
-                {/* Question */}
-                <h2 className="text-2xl font-bold text-white/90 mb-1">{currentStep.question}</h2>
-                <p className="text-sm text-white/35">{currentStep.desc}</p>
+                {/* Question with animated entrance */}
+                <div
+                    className="transition-all duration-300"
+                    style={{
+                        opacity: isSliding ? 0 : 1,
+                        transform: isSliding
+                            ? `translateX(${slideDir === "right" ? "-20px" : "20px"})`
+                            : "translateX(0)",
+                    }}
+                >
+                    <h2 className="text-2xl font-bold text-white/90 mb-1">{currentStep.question}</h2>
+                    <p className="text-sm text-white/35">{currentStep.desc}</p>
+                </div>
             </div>
 
-            {/* Content area */}
-            <div className="flex-1 overflow-y-auto px-8 pb-8" style={{ scrollbarWidth: "thin" }}>
+            {/* Content area with slide animation */}
+            <div
+                className="flex-1 overflow-y-auto px-8 pb-8 transition-all duration-300"
+                style={{
+                    scrollbarWidth: "thin",
+                    opacity: isSliding ? 0 : 1,
+                    transform: isSliding
+                        ? `translateX(${slideDir === "right" ? "30px" : "-30px"})`
+                        : "translateX(0)",
+                }}
+            >
                 {renderStepContent()}
             </div>
 
-            {/* Bottom navigation */}
-            <div className="px-8 py-4 border-t border-white/[0.06] flex items-center gap-3 flex-shrink-0 bg-gray-950/90 backdrop-blur-sm">
-                <button onClick={() => setStep(Math.max(0, step - 1))} disabled={step === 0}
+            {/* Bottom navigation — enhanced */}
+            <div className="px-8 py-4 border-t border-white/[0.06] flex items-center gap-3 flex-shrink-0 bg-gray-950/90 backdrop-blur-xl">
+                <button onClick={() => goToStep(step - 1)} disabled={step === 0}
                     className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-medium text-white/40 hover:text-white/70 hover:bg-white/[0.04] transition-all disabled:opacity-20 disabled:cursor-not-allowed"
                 >
                     <ChevronLeft className="w-4 h-4" /> 이전
                 </button>
+
+                {/* Summary chips */}
+                {summaryChips.length > 0 && (
+                    <div className="flex items-center gap-1.5 ml-2">
+                        {summaryChips.map((chip, i) => (
+                            <span key={i} className="px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-[10px] text-white/30 font-medium">
+                                {chip}
+                            </span>
+                        ))}
+                    </div>
+                )}
+
                 <div className="flex-1" />
                 {step < STEPS.length - 1 ? (
-                    <button onClick={() => setStep(step + 1)}
-                        className="flex items-center gap-1.5 px-6 py-2.5 rounded-xl text-xs font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-500/30 transition-all"
+                    <button onClick={() => goToStep(step + 1)}
+                        className="group flex items-center gap-1.5 px-6 py-2.5 rounded-xl text-xs font-semibold bg-indigo-500/15 text-indigo-300 border border-indigo-500/25 hover:bg-indigo-500/25 hover:border-indigo-500/40 hover:shadow-lg hover:shadow-indigo-500/10 transition-all duration-200"
                     >
-                        다음 <ChevronRight className="w-4 h-4" />
+                        다음 <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                     </button>
                 ) : (
                     <button onClick={handleStart} disabled={isRunning}
-                        className="flex items-center gap-2 px-8 py-3 rounded-xl text-sm font-bold bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="group flex items-center gap-2 px-8 py-3 rounded-xl text-sm font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:via-purple-500 hover:to-pink-500 text-white shadow-lg shadow-indigo-500/25 hover:shadow-purple-500/30 hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        <Rocket className="w-4 h-4" />
+                        <Rocket className="w-4 h-4 group-hover:rotate-12 transition-transform" />
                         {isRunning ? "생성 중..." : "AI로 사이트 생성 시작!"}
                     </button>
                 )}

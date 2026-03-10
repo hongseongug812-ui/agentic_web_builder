@@ -71,7 +71,9 @@ from routes.orchestrator import router as orchestrator_router
 from routes.websocket import router as ws_router
 from routes.export import router as export_router
 from routes.preview_deploy import router as preview_router
+from routes.analytics import router as analytics_router
 from llm_provider import get_available_providers
+from services.analytics_db import init_db
 
 
 # ──────────────────────────────────────────────
@@ -80,6 +82,8 @@ from llm_provider import get_available_providers
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("🚀 Agentic Web Builder v%s 시작", VERSION)
+    # DB 초기화
+    init_db()
     providers = get_available_providers()
     configured = [p["name"] for p in providers if p["configured"]]
     if configured:
@@ -194,6 +198,7 @@ app.include_router(orchestrator_router)
 app.include_router(ws_router)
 app.include_router(export_router)
 app.include_router(preview_router)
+app.include_router(analytics_router)
 
 
 # ──────────────────────────────────────────────
