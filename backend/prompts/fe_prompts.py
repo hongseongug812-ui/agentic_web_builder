@@ -71,20 +71,60 @@ FE_LEAD_GENERATE_PROMPT = USER_INPUT_GUARDRAIL + """\
 - import 없이 순수 JSX + Tailwind (React.useState 형태)
 - 모든 이미지에 alt 텍스트
 
-반드시 아래 JSON 형식으로만 응답:
-{
-  "framework": "Next.js 14",
-  "files": [
-    { "path": "src/app/globals.css", "code": "코드", "language": "css" },
-    { "path": "src/app/layout.tsx", "code": "코드", "language": "tsx" },
-    { "path": "src/app/page.tsx", "code": "코드", "language": "tsx" },
-    { "path": "src/app/about/page.tsx", "code": "코드", "language": "tsx" },
-    { "path": "src/app/services/page.tsx", "code": "코드", "language": "tsx" },
-    { "path": "src/app/portfolio/page.tsx", "code": "코드", "language": "tsx" },
-    { "path": "src/app/contact/page.tsx", "code": "코드", "language": "tsx" }
-  ],
-  "summary": "생성된 코드 설명"
-}
+반드시 아래 XML 형식으로만 응답해라. JSON 절대 금지.
+코드 안에 특수문자가 있어도 그대로 출력해라 — 이스케이프 불필요.
+
+<output framework="Next.js 14" summary="생성된 코드 한 줄 요약">
+<file path="src/app/globals.css" language="css">
+전체 CSS 코드
+</file>
+<file path="src/app/layout.tsx" language="tsx">
+전체 TSX 코드
+</file>
+<file path="src/app/page.tsx" language="tsx">
+전체 TSX 코드
+</file>
+<file path="src/app/about/page.tsx" language="tsx">
+전체 TSX 코드
+</file>
+<file path="src/app/services/page.tsx" language="tsx">
+전체 TSX 코드
+</file>
+<file path="src/app/portfolio/page.tsx" language="tsx">
+전체 TSX 코드
+</file>
+<file path="src/app/contact/page.tsx" language="tsx">
+전체 TSX 코드
+</file>
+</output>
+"""
+
+
+# ── FE Lite 코드 생성 (간단 요청 전용, 1~3페이지) ──
+LITE_FE_GENERATE_PROMPT = USER_INPUT_GUARDRAIL + """\
+너는 수상 경력이 있는 시니어 React/Next.js 개발자야.
+간단한 요청에 맞춰 핵심 페이지만 빠르게 생성해라.
+
+⚠️ 요청에 필요한 파일만 생성해라 (최대 3개 파일).
+⚠️ Lorem ipsum 절대 사용 금지! 실제 한국어 콘텐츠로 채워라.
+⚠️ 절대 평범한 디자인 금지. 프리미엄 다크 UI + 글래스모피즘 + 그라디언트.
+
+## 필수 디자인 규칙
+1. 다크 배경: `bg-[#030712]` 기반 + 네온 그라디언트 액센트
+2. 글래스모피즘: `backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl`
+3. 인터랙션: `transition-all duration-300 hover:scale-[1.02]`
+4. 반응형: `grid-cols-1 md:grid-cols-2 lg:grid-cols-3`
+5. 여백: `max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16`
+6. Unsplash 실제 이미지 사용
+7. `'use client'` 추가, 순수 JSX + Tailwind
+
+반드시 아래 XML 형식으로만 응답해라. JSON 절대 금지.
+
+<output framework="Next.js 14" summary="생성된 코드 한 줄 요약">
+<file path="파일경로" language="tsx">
+전체 코드
+</file>
+</output>
 """
 
 

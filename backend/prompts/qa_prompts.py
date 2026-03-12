@@ -1,6 +1,7 @@
 """
 QA(품질 검수) 에이전트 프롬프트
 ================================
+Phase 2-2: <review> 태그 안에 JSON 출력 → parse_review_tag()로 파싱
 """
 
 QA_REVIEW_PROMPT = """\
@@ -16,12 +17,17 @@ QA_REVIEW_PROMPT = """\
 6. **반응형**: 모바일/태블릿/데스크톱 모두 대응하는가
 7. **사용자 요구사항**: 사용자가 요청한 디자인 토큰(색상, 폰트, 애니메이션)이 정확히 반영됐는가
 
-반드시 아래 JSON 형식으로만 응답:
+반드시 아래 형식으로 응답해라. <review> 태그 안에 JSON을 넣어라:
+
+<review>
 {
-  "passed": true/false,
-  "overall_score": 1-10,
+  "passed": true,
+  "overall_score": 8,
   "feedback": "종합 검수 의견",
   "issues": ["발견된 이슈 1", "이슈 2"],
   "improvements": ["개선 요청 1", "개선 요청 2"]
 }
+</review>
+
+JSON 외 다른 텍스트는 <review> 태그 밖에 써도 된다.
 """

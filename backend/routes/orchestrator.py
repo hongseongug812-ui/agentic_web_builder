@@ -46,16 +46,17 @@ from models import (
 )
 from llm_provider import get_llm_provider, generate_with_json_retry
 from routes.websocket import manager
-from agents.classifier import classify_input
+from agents.classifier import classify_input, classify_complexity
 from security import sanitize_user_input, validate_code, InjectionDetectedError
 
 # ── 프롬프트 모듈 ──
-from prompts.cto_prompts import CTO_PLAN_PROMPT, CTO_REFINE_PROMPT
+from prompts.cto_prompts import CTO_PLAN_PROMPT, CTO_REFINE_PROMPT, LITE_CTO_PROMPT
 from prompts.fe_prompts import (
     FE_LEAD_REVIEW_PROMPT,
     FE_DEV_REVIEW_PROMPT,
     FE_LEAD_GENERATE_PROMPT,
     FE_DEV_CODE_REVIEW_PROMPT,
+    LITE_FE_GENERATE_PROMPT,
 )
 from prompts.be_prompts import (
     BE_LEAD_REVIEW_PROMPT,
@@ -72,6 +73,7 @@ from prompts.cross_team_prompts import (
 
 # ── 서비스 모듈 ──
 from services.debate_service import run_fe_team_debate, run_be_team_debate, run_cto_refine, run_cross_team_sync
+from services.error_handler import ErrorSeverity, safe_llm_call
 from services.code_generation_service import generate_frontend_code, review_frontend_code, generate_backend_code
 from services.qa_service import run_qa_review
 from services.prompt_builder import (
@@ -89,6 +91,120 @@ from services.analytics_db import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["orchestrator"])
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Lite Mode 파이프라인 (3-call: CTO → FE → QA)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async def _run_lite_pipeline(
+    request: "OrchestrateRequest",
+    safe_prompt: str,
+    llm,
+    provider: str,
+    session_id: int,
+    start_time_ms: int,
+) -> "OrchestrateResponse":
+    """
+    Lite Mode: CTO 기획(1) → FE 코드 생성(1) → QA(1) = 3회
+    토론·크로스팀싱크·BE생성·FE리뷰 전부 생략.
+    목표: 20~40초 이내.
+    """
+    debate_log: list[DebateMessage] = []
+    qa_score = 7
+
+    await manager.broadcast("mode_selected", {"mode": "lite", "estimated_seconds": 30})
+
+    # ── Step 1: CTO 기획 (Lite 버전) ──
+    await _agent_start("cto-agent", 1, "planning_lite", provider)
+    try:
+        pm_data = await safe_llm_call(
+            lambda: generate_with_json_retry(llm, LITE_CTO_PROMPT, safe_prompt),
+            agent="cto-agent", stage="lite_planning",
+            severity=ErrorSeverity.FATAL, retries=2, manager=manager,
+        )
+        current_plan = ProjectPlan(**pm_data)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Lite CTO 기획 실패: %s", str(e))
+        raise HTTPException(status_code=502, detail=f"기획 실패: {str(e)}")
+
+    debate_log.append(DebateMessage(
+        agent=AgentRole.CTO, round=1, message_type=MessageType.PLAN,
+        content="🧑‍💼 CTO [Lite]: 기획서 작성 완료",
+        data=current_plan.model_dump(),
+    ))
+    await _agent_done("cto-agent", 1)
+    await manager.broadcast("debate_message", debate_log[-1].model_dump())
+
+    plan_json = json.dumps(current_plan.model_dump(), ensure_ascii=False)
+
+    # ── Step 2: FE 코드 생성 (Lite 버전, XML 출력) ──
+    from services.prompt_builder import build_fe_generation_prompt
+    fe_gen_prompt = build_fe_generation_prompt(plan_json, safe_prompt)
+    final_code, fe_log = await generate_frontend_code(
+        llm, fe_gen_prompt, LITE_FE_GENERATE_PROMPT, provider,
+    )
+    debate_log.extend(fe_log)
+
+    # ── Step 3: QA (간소화, 1회만) ──
+    from services.prompt_builder import build_qa_prompt
+    fe_code_preview = "\n---\n".join(
+        f"// {f.path}\n{f.code[:200]}{'...' if len(f.code) > 200 else ''}"
+        for f in (final_code.files if final_code else [])[:2]
+    )
+    qa_prompt = build_qa_prompt(plan_json, fe_code_preview, len(final_code.files if final_code else []), "", 0, "", safe_prompt)
+    try:
+        qa_passed, qa_score, _, _, _, qa_log = await run_qa_review(
+            llm, qa_prompt, QA_REVIEW_PROMPT, 1, 1, provider,
+        )
+        debate_log.extend(qa_log)
+        # Lite: 6점 미만이면 1회 재생성
+        if not qa_passed and qa_score < 6:
+            logger.info("Lite QA 미통과 (점수: %d) — 1회 재생성", qa_score)
+            final_code, fe_log2 = await generate_frontend_code(
+                llm, fe_gen_prompt, LITE_FE_GENERATE_PROMPT, provider,
+            )
+            debate_log.extend(fe_log2)
+    except HTTPException as e:
+        logger.warning("Lite QA 실패 (경고, 코드는 반환): %s", str(e))
+        await manager.broadcast("qa_warning", {"message": "QA 검수 실패, 코드를 그대로 반환합니다."})
+
+    # 보안 검증
+    if final_code:
+        code_validation = validate_code([f.model_dump() for f in final_code.files])
+        if not code_validation.passed:
+            await manager.broadcast("security_violations", {
+                "violations": code_validation.violations,
+                "warnings": code_validation.warnings,
+            })
+
+    elapsed_ms = int(time.time() * 1000) - start_time_ms
+    logger.info("Lite Mode 완료 — %dms", elapsed_ms)
+
+    _last_result.update({"plan": current_plan, "code": final_code, "backend_code": None, "provider": provider})
+
+    try:
+        complete_session(
+            session_id=session_id,
+            total_files=len(final_code.files) if final_code else 0,
+            qa_score=qa_score,
+            generation_time_ms=elapsed_ms,
+            status="completed_lite",
+        )
+    except Exception as e:
+        logger.warning("세션 완료 추적 실패: %s", str(e))
+
+    await manager.broadcast("pipeline_complete", {"status": "completed", "mode": "lite", "session_id": session_id})
+
+    return OrchestrateResponse(
+        plan=current_plan,
+        code=final_code,
+        backend_code=None,
+        debate_log=debate_log,
+        total_rounds=1,
+        status="completed",
+    )
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -123,7 +239,6 @@ async def orchestrate(request: OrchestrateRequest):
     max_rounds = request.max_rounds
 
     llm = get_llm_provider(provider)
-    logger.info("회사형 멀티에이전트 파이프라인 시작 — provider=%s", provider)
     start_time_ms = int(time.time() * 1000)
 
     # ── 보안: 프롬프트 인젝션 방어 ──────────────────────────────
@@ -134,7 +249,16 @@ async def orchestrate(request: OrchestrateRequest):
         await manager.broadcast("error", {"message": "보안 위반: 허용되지 않은 입력이 탐지되었습니다."})
         raise HTTPException(status_code=400, detail=f"보안 위반: {str(e)}")
 
-    # 세션 추적 시작
+    # ── Lite / Full 모드 자동 선택 ──────────────────────────────
+    use_lite = request.lite_mode
+    if not use_lite:
+        complexity = classify_complexity(request.prompt)
+        use_lite = (complexity == "simple")
+        logger.info("복잡도 자동 분류: %s → %s Mode", complexity, "Lite" if use_lite else "Full")
+    else:
+        logger.info("Lite Mode 명시적 요청")
+
+    # ── Lite Mode 분기 ──────────────────────────────────────────
     session_id = 0
     try:
         session_id = create_session(
@@ -152,18 +276,26 @@ async def orchestrate(request: OrchestrateRequest):
     except Exception as e:
         logger.warning("세션 추적 실패 (non-fatal): %s", str(e))
 
+    if use_lite:
+        return await _run_lite_pipeline(request, safe_prompt, llm, provider, session_id, start_time_ms)
+
+    logger.info("Full Mode 파이프라인 시작 — provider=%s", provider)
+
     # ═══════════════════════════════════════════
     # PHASE 1: CTO 기획
     # ═══════════════════════════════════════════
     await _agent_start("cto-agent", 1, "planning", provider)
     try:
-        pm_data = await generate_with_json_retry(llm, CTO_PLAN_PROMPT, safe_prompt)
+        pm_data = await safe_llm_call(
+            lambda: generate_with_json_retry(llm, CTO_PLAN_PROMPT, safe_prompt),
+            agent="cto-agent", stage="planning",
+            severity=ErrorSeverity.FATAL, retries=2, manager=manager,
+        )
         current_plan = ProjectPlan(**pm_data)
     except HTTPException:
         raise
     except Exception as e:
         logger.error("CTO 기획 실패: %s", str(e))
-        await manager.broadcast("error", {"message": str(e)})
         raise HTTPException(status_code=502, detail=f"CTO 기획 실패: {str(e)}")
 
     debate_log.append(DebateMessage(
@@ -274,13 +406,13 @@ async def orchestrate(request: OrchestrateRequest):
         )
         debate_log.extend(be_gen_log)
 
-        # QA 검수
+        # QA 검수 (Phase 03: auto-pass 제거, Phase 04: 미리보기 압축)
         fe_code_preview = "\n---\n".join(
-            f"// {f.path}\n{f.code[:500]}{'...(생략)' if len(f.code) > 500 else ''}"
+            f"// {f.path}\n{f.code[:300]}{'...(생략)' if len(f.code) > 300 else ''}"
             for f in (final_code.files if final_code else [])[:3]
         )
         be_code_preview = "\n---\n".join(
-            f"# {f.path}\n{f.code[:500]}{'...(생략)' if len(f.code) > 500 else ''}"
+            f"# {f.path}\n{f.code[:300]}{'...(생략)' if len(f.code) > 300 else ''}"
             for f in (backend_code.files if backend_code else [])[:3]
         )
         qa_prompt = build_qa_prompt(
@@ -288,14 +420,27 @@ async def orchestrate(request: OrchestrateRequest):
             be_code_preview, len(backend_code.files) if backend_code else 0,
             code_review.feedback, request.prompt,
         )
-        qa_passed, qa_score, _, _, _, qa_log = await run_qa_review(
-            llm, qa_prompt, QA_REVIEW_PROMPT, qa_attempt, qa_max_attempts, provider,
-        )
-        debate_log.extend(qa_log)
+        try:
+            qa_passed, qa_score, _, _, _, qa_log = await run_qa_review(
+                llm, qa_prompt, QA_REVIEW_PROMPT, qa_attempt, qa_max_attempts, provider,
+            )
+            debate_log.extend(qa_log)
+        except HTTPException as e:
+            # Phase 03: QA LLM 실패 → 경고 브로드캐스트 후 파이프라인 완료
+            logger.warning("QA 검수 실패 — 코드는 반환 (경고): %s", str(e))
+            await manager.broadcast("qa_warning", {"message": f"QA 검수 실패: {e.detail}"})
+            qa_passed = False
+            qa_score = 5
+            break
 
         if qa_passed or qa_attempt >= qa_max_attempts:
+            if not qa_passed and qa_attempt >= qa_max_attempts:
+                logger.warning("QA 최종 미통과 (점수: %d/10) — 코드는 반환 (경고)", qa_score)
+                await manager.broadcast("qa_warning", {
+                    "message": f"QA 검수 미통과 (점수: {qa_score}/10). 코드를 검토 후 사용하세요."
+                })
             break
-        logger.info("QA 미통과 (점수: %d/10) — 코드 재생성", qa_score)
+        logger.info("QA 미통과 (점수: %d/10) — 코드 재생성 (%d/%d)", qa_score, qa_attempt, qa_max_attempts)
 
     # ── 보안: 생성된 코드 정적 검증 ──────────────────────────────
     all_files = []
@@ -389,8 +534,23 @@ async def revise_code(request: RevisionRequest):
     )
 
     try:
-        revised_data = await generate_with_json_retry(llm, REVISION_PROMPT, revision_prompt)
-        revised_code = FrontendCode(**revised_data)
+        # Phase 2-2: XML 파서 사용 (diff 기반 — 변경된 파일만 반환)
+        from llm_provider import generate_code_xml
+        from services.code_parser import parse_with_fallback, parsed_files_to_dict
+        raw_text = await llm.generate(REVISION_PROMPT, revision_prompt, force_json=False)
+        parsed = parse_with_fallback(raw_text)
+        revised_dict = parsed_files_to_dict(parsed)
+
+        # diff 기반 병합: 기존 파일 + 변경된 파일
+        if existing_code and parsed:
+            existing_map = {f.path: f for f in existing_code.files}
+            for pf in parsed:
+                from models import GeneratedFile
+                existing_map[pf.path] = GeneratedFile(path=pf.path, code=pf.content, language=pf.language)
+            revised_dict["files"] = [f.model_dump() for f in existing_map.values()]
+            revised_dict["summary"] = f"{len(parsed)}개 파일 수정 완료"
+
+        revised_code = FrontendCode(**revised_dict)
     except Exception as e:
         logger.error("코드 수정 실패: %s", str(e))
         await manager.broadcast("error", {"message": str(e)})

@@ -48,7 +48,11 @@ async def run_fe_team_debate(
         fe_lead_review = ReviewResult(**fe_lead_data)
     except Exception as e:
         logger.error("FE Lead 리뷰 실패: %s", str(e))
-        fe_lead_review = ReviewResult(approved=True, feedback="자동 승인", suggestions=[])
+        await manager.broadcast("agent_warning", {
+            "agent": "fe-lead-agent", "stage": "fe_review",
+            "message": "FE Lead 리뷰 실패 — 미승인으로 처리", "detail": str(e)[:200],
+        })
+        fe_lead_review = ReviewResult(approved=False, feedback=f"리뷰 실패: {str(e)[:100]}", suggestions=[])
 
     debate_log.append(DebateMessage(
         agent=AgentRole.FE_LEAD, round=round_num, message_type=MessageType.FE_DEBATE,
@@ -71,7 +75,11 @@ async def run_fe_team_debate(
         fe_dev_review = ReviewResult(**fe_dev_data)
     except Exception as e:
         logger.error("FE Dev 리뷰 실패: %s", str(e))
-        fe_dev_review = ReviewResult(approved=True, feedback="자동 승인", suggestions=[])
+        await manager.broadcast("agent_warning", {
+            "agent": "fe-dev-agent", "stage": "fe_review",
+            "message": "FE Dev 리뷰 실패 — 미승인으로 처리", "detail": str(e)[:200],
+        })
+        fe_dev_review = ReviewResult(approved=False, feedback=f"리뷰 실패: {str(e)[:100]}", suggestions=[])
 
     debate_log.append(DebateMessage(
         agent=AgentRole.FE_DEV, round=round_num, message_type=MessageType.FE_DEBATE,
@@ -102,7 +110,11 @@ async def run_be_team_debate(
         be_lead_review = ReviewResult(**be_lead_data)
     except Exception as e:
         logger.error("BE Lead 리뷰 실패: %s", str(e))
-        be_lead_review = ReviewResult(approved=True, feedback="자동 승인", suggestions=[])
+        await manager.broadcast("agent_warning", {
+            "agent": "be-lead-agent", "stage": "be_review",
+            "message": "BE Lead 리뷰 실패 — 미승인으로 처리", "detail": str(e)[:200],
+        })
+        be_lead_review = ReviewResult(approved=False, feedback=f"리뷰 실패: {str(e)[:100]}", suggestions=[])
 
     debate_log.append(DebateMessage(
         agent=AgentRole.BE_LEAD, round=round_num, message_type=MessageType.BE_DEBATE,
@@ -125,7 +137,11 @@ async def run_be_team_debate(
         be_dev_review = ReviewResult(**be_dev_data)
     except Exception as e:
         logger.error("BE Dev 리뷰 실패: %s", str(e))
-        be_dev_review = ReviewResult(approved=True, feedback="자동 승인", suggestions=[])
+        await manager.broadcast("agent_warning", {
+            "agent": "be-dev-agent", "stage": "be_review",
+            "message": "BE Dev 리뷰 실패 — 미승인으로 처리", "detail": str(e)[:200],
+        })
+        be_dev_review = ReviewResult(approved=False, feedback=f"리뷰 실패: {str(e)[:100]}", suggestions=[])
 
     debate_log.append(DebateMessage(
         agent=AgentRole.BE_DEV, round=round_num, message_type=MessageType.BE_DEBATE,
@@ -174,6 +190,10 @@ async def run_cto_refine(
     except Exception as e:
         logger.error("CTO 수정 실패: %s", str(e))
         await _agent_done("cto-agent", round_num + 1)
+        await manager.broadcast("agent_warning", {
+            "agent": "cto-agent", "stage": "cto_refine",
+            "message": "CTO 기획서 수정 실패 — 이전 기획서를 유지합니다", "detail": str(e)[:200],
+        })
         return None, debate_log
 
     debate_log.append(DebateMessage(

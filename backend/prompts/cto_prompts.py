@@ -31,6 +31,25 @@ CTO_PLAN_PROMPT = USER_INPUT_GUARDRAIL + """\
 """
 
 
+# ── CTO Lite 기획 프롬프트 (간단 요청 전용, 빠른 기획) ──
+LITE_CTO_PROMPT = USER_INPUT_GUARDRAIL + """\
+너는 웹사이트 아키텍트다. 사용자의 간단한 요청을 받아 필요한 변경사항만 JSON으로 출력해라.
+전체 설계를 다시 하지 마라. 변경 사항(diff)만 출력해라.
+
+반드시 아래 JSON 형식으로만 응답해라:
+{
+  "pages": [
+    { "name": "홈", "route": "/", "components": [{ "name": "Hero", "description": "메인 히어로" }] }
+  ],
+  "api_endpoints": [],
+  "db_schema": []
+}
+
+간단한 랜딩/소개/포트폴리오 페이지라면 1~3개 페이지면 충분하다.
+불필요한 백엔드 API나 DB는 포함하지 마라.
+"""
+
+
 # ── CTO 수정 프롬프트 ──
 CTO_REFINE_PROMPT = """\
 너는 CTO이다. 프론트엔드팀과 백엔드팀의 토론 결과를 반영하여 기획서를 최종 수정해라.

@@ -16,6 +16,18 @@ from prompts.fe_prompts import FE_LEAD_GENERATE_PROMPT
 
 logger = logging.getLogger(__name__)
 
+# Phase 04: 컨텍스트 압축 — 토큰 40% 절감
+_PLAN_MAX_CHARS = 3000   # 기획서 최대 길이
+_PREVIEW_MAX_CHARS = 300  # 파일 미리보기 최대 길이 (파일당)
+_USER_PROMPT_MAX_CHARS = 2000  # 사용자 프롬프트 최대 길이
+
+
+def _truncate(text: str, max_chars: int, suffix: str = "...(생략)") -> str:
+    """텍스트를 max_chars로 잘라냅니다."""
+    if len(text) <= max_chars:
+        return text
+    return text[:max_chars] + suffix
+
 
 def build_fe_generation_prompt(
     plan_json: str,
@@ -36,8 +48,12 @@ def build_fe_generation_prompt(
     has_animation = "애니메이션" in user_prompt
     has_sections = "페이지 섹션" in user_prompt
 
+    # Phase 04: 기획서 압축
+    plan_json_truncated = _truncate(plan_json, _PLAN_MAX_CHARS)
+    user_prompt_truncated = _truncate(user_prompt, _USER_PROMPT_MAX_CHARS)
+
     prompt_parts = [
-        f"다음 확정된 기획서를 바탕으로 코드를 생성해줘:\n{plan_json}",
+        f"다음 확정된 기획서를 바탕으로 코드를 생성해줘:\n{plan_json_truncated}",
     ]
 
     if has_design_system or has_animation or has_sections:
@@ -46,11 +62,11 @@ def build_fe_generation_prompt(
             f"## 🎨 사용자 디자인 요구사항 (반드시 준수!)\n\n"
             f"아래는 사용자가 직접 선택한 디자인 설정입니다.\n"
             f"기획서보다 이 디자인 요구사항을 우선시해서 코드에 정확히 반영해라:\n\n"
-            f"{user_prompt}"
+            f"{user_prompt_truncated}"
         )
     else:
         prompt_parts.append(
-            f"\n\n## 사용자 요구사항:\n{user_prompt}"
+            f"\n\n## 사용자 요구사항:\n{user_prompt_truncated}"
         )
 
     logger.info(
@@ -62,12 +78,10 @@ def build_fe_generation_prompt(
 
 
 def build_be_generation_prompt(plan_json: str, user_prompt: str) -> str:
-    """
-    BE Lead 코드 생성용 프롬프트를 조합합니다.
-    """
+    """BE Lead 코드 생성용 프롬프트를 조합합니다. (Phase 04: 압축 적용)"""
     return (
-        f"다음 확정된 기획서를 바탕으로 백엔드 코드를 생성해줘:\n{plan_json}\n\n"
-        f"## 사용자 요구사항:\n{user_prompt}"
+        f"다음 확정된 기획서를 바탕으로 백엔드 코드를 생성해줘:\n{_truncate(plan_json, _PLAN_MAX_CHARS)}\n\n"
+        f"## 사용자 요구사항:\n{_truncate(user_prompt, _USER_PROMPT_MAX_CHARS)}"
     )
 
 

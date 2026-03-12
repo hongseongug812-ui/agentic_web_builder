@@ -248,6 +248,75 @@ async def llm_classify(user_input: str, current_ir: dict, llm) -> dict:
 
 
 # ─────────────────────────────────────────────
+# 복잡도 분류 (Lite vs Full Mode 자동 선택)
+# ─────────────────────────────────────────────
+
+COMPLEX_PATTERNS = [
+    # 멀티페이지 / 대규모
+    r"(\d+)\s*(개|페이지)",
+    r"(여러|다중|멀티).{0,10}(페이지|사이트)",
+    r"(여러|다중|복수).{0,10}(기능|시스템)",
+    # 백엔드 필요
+    r"(로그인|회원|인증|결제|DB|데이터베이스|API|서버)",
+    r"(login|auth|payment|database|backend|server)",
+    # 동적/실시간 기능
+    r"(실시간|채팅|알림|대시보드|관리자)",
+    r"(realtime|chat|notification|dashboard|admin)",
+    # 전체 리디자인
+    r"(전체|완전히|처음부터|새로).{0,10}(바꿔|변경|리디자인|새로|만들어)",
+    r"(완전|전면).{0,10}(재구성|재설계)",
+    # 이커머스
+    r"(쇼핑|장바구니|주문|배송|상품|재고)",
+    r"(shop|cart|order|product|inventory)",
+    # 사용자 관리
+    r"(회원가입|프로필|마이페이지|권한)",
+]
+
+SIMPLE_PATTERNS = [
+    # 단일 섹션/컴포넌트 추가
+    r"(FAQ|갤러리|후기|리뷰|팀소개|가격표|연락처).{0,10}(추가|넣|만들|섹션)",
+    r"(add|insert).{0,10}(section|faq|gallery|review|team|pricing)",
+    # 간단한 랜딩/소개 페이지
+    r"(랜딩|소개|프로필|포트폴리오).{0,10}(페이지|사이트)",
+    r"(landing|about|profile|portfolio).{0,10}(page|site)",
+    # 단순 폼
+    r"(문의|연락).{0,10}(폼|양식|페이지)",
+    r"(contact|form).{0,10}(page|add)",
+    # 단일 기능 추가
+    r"(카운터|타이머|배너|슬라이더).{0,10}(추가|넣)",
+    r"(counter|timer|banner|slider).{0,10}(add|insert)",
+]
+
+
+def classify_complexity(user_input: str) -> str:
+    """
+    요청 복잡도 판단 → 'simple' 또는 'complex' 반환.
+    - simple → Lite Mode (3-call 파이프라인)
+    - complex → Full Mode (13+ call 파이프라인)
+    """
+    text = user_input.lower()
+
+    # 복잡 패턴이 하나라도 매칭되면 complex
+    for pattern in COMPLEX_PATTERNS:
+        if re.search(pattern, text, re.IGNORECASE):
+            logger.debug("복잡도: complex — 패턴: %s", pattern)
+            return "complex"
+
+    # 간단 패턴 매칭 → simple
+    for pattern in SIMPLE_PATTERNS:
+        if re.search(pattern, text, re.IGNORECASE):
+            logger.debug("복잡도: simple — 패턴: %s", pattern)
+            return "simple"
+
+    # 짧은 요청은 simple로 간주 (50자 미만)
+    if len(user_input.strip()) < 50:
+        return "simple"
+
+    # 기본값: complex (안전하게 Full Mode)
+    return "complex"
+
+
+# ─────────────────────────────────────────────
 # 메인 분류 함수
 # ─────────────────────────────────────────────
 

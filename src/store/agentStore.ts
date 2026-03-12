@@ -48,6 +48,7 @@ interface AgentStore {
     debateMessages: DebateMessage[];
     currentRound: number;
     error: string | null;
+    warnings: string[];
     setError: (e: string | null) => void;
     clearDebate: () => void;
 
@@ -56,6 +57,7 @@ interface AgentStore {
     pipelineTotal: number;
     pipelineLabel: string;
     retryAvailable: boolean;
+    retryInfo: { agent: string; stage: string; attempt: number; maxAttempts: number } | null;
 
     /* Core actions */
     runSequence: () => void;
@@ -86,14 +88,17 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
     debateMessages: [],
     currentRound: 0,
     error: null,
+    warnings: [],
     setError: (e) => set({ error: e }),
     clearDebate: () => set({
         debateMessages: [],
         agentOutputData: {},
         currentRound: 0,
         error: null,
+        warnings: [],
         pipelineStep: 0,
         pipelineLabel: "",
+        retryInfo: null,
     }),
 
     /* ── Pipeline Progress ── */
@@ -101,6 +106,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
     pipelineTotal: 20,
     pipelineLabel: "",
     retryAvailable: false,
+    retryInfo: null,
 
     /* ── Run Sequence ── */
     runSequence: () => {
@@ -124,6 +130,8 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
             lastGeneratedPrompt: prompt,
             isRunning: true,
             error: null,
+            warnings: [],
+            retryInfo: null,
         });
         get().resetAllAgents();
         get().clearDebate();
@@ -195,8 +203,27 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
                                 },
                             },
                         }));
+                    } else if (evtType === "agent_retry" && data) {
+                        set({ retryInfo: {
+                            agent: data.agent as string,
+                            stage: data.stage as string,
+                            attempt: data.attempt as number,
+                            maxAttempts: data.max_attempts as number,
+                        }, pipelineLabel: `재시도 중... (${data.attempt}/${data.max_attempts})` });
+                    } else if (evtType === "agent_warning" && data) {
+                        set((state) => ({
+                            warnings: [...state.warnings, data.message as string || "에이전트 경고"],
+                            retryInfo: null,
+                        }));
+                    } else if (evtType === "pipeline_error" && data) {
+                        set({
+                            error: data.message as string || "파이프라인 오류",
+                            isRunning: false,
+                            retryAvailable: true,
+                            retryInfo: null,
+                        });
                     } else if (evtType === "pipeline_complete") {
-                        set({ isRunning: false, pipelineLabel: "완료", retryAvailable: false });
+                        set({ isRunning: false, pipelineLabel: "완료", retryAvailable: false, retryInfo: null });
                     } else if (evtType === "error") {
                         set({ error: data?.message || "알 수 없는 오류", isRunning: false, retryAvailable: true });
                     }

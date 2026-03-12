@@ -1,11 +1,12 @@
 "use client";
 
 import { useAgentStore } from "@/store";
-import { RotateCcw, RefreshCw } from "lucide-react";
+import { RotateCcw, RefreshCw, AlertTriangle } from "lucide-react";
 
 /**
  * 파이프라인 진행률 바 — 캔버스 상단에 표시
  * 에러 시: 어느 에이전트에서 실패했는지 + 재시도/처음부터 버튼
+ * 경고 시: 경고 카운트 + 재시도 중 표시
  */
 export default function PipelineProgress() {
     const isRunning      = useAgentStore((s) => s.isRunning);
@@ -13,6 +14,8 @@ export default function PipelineProgress() {
     const total          = useAgentStore((s) => s.pipelineTotal);
     const label          = useAgentStore((s) => s.pipelineLabel);
     const error          = useAgentStore((s) => s.error);
+    const warnings       = useAgentStore((s) => s.warnings);
+    const retryInfo      = useAgentStore((s) => s.retryInfo);
     const retryAvailable = useAgentStore((s) => s.retryAvailable);
     const retrySequence  = useAgentStore((s) => s.retrySequence);
     const runSequence    = useAgentStore((s) => s.runSequence);
@@ -70,7 +73,21 @@ export default function PipelineProgress() {
                 </div>
 
                 <div className="flex items-center gap-2 flex-shrink-0">
-                    {!error && !isComplete && total > 0 && (
+                    {retryInfo && !error && (
+                        <span className="text-[10px] text-amber-400/70 font-mono">
+                            재시도 {retryInfo.attempt}/{retryInfo.maxAttempts}
+                        </span>
+                    )}
+                    {warnings.length > 0 && !error && (
+                        <span
+                            className="flex items-center gap-1 text-[10px] text-amber-400/70"
+                            title={warnings.join("\n")}
+                        >
+                            <AlertTriangle className="w-3 h-3" />
+                            {warnings.length}
+                        </span>
+                    )}
+                    {!error && !isComplete && total > 0 && !retryInfo && (
                         <span className="text-[10px] text-white/25 font-mono tabular-nums">
                             {Math.round(pct)}%
                         </span>

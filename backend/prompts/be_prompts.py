@@ -130,19 +130,32 @@ BE_LEAD_GENERATE_PROMPT = USER_INPUT_GUARDRAIL + """\
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-반드시 아래 JSON 형식으로만 응답:
-{
-  "framework": "FastAPI",
-  "files": [
-    { "path": "backend/main.py", "code": "코드 내용", "language": "python" },
-    { "path": "backend/database.py", "code": "코드 내용", "language": "python" },
-    { "path": "backend/models.py", "code": "코드 내용", "language": "python" },
-    { "path": "backend/schemas.py", "code": "코드 내용", "language": "python" },
-    { "path": "backend/routes/__init__.py", "code": "", "language": "python" },
-    { "path": "backend/routes/items.py", "code": "코드 내용", "language": "python" },
-    { "path": "backend/utils.py", "code": "코드 내용", "language": "python" },
-    { "path": "backend/requirements.txt", "code": "의존성 목록", "language": "text" }
-  ],
-  "summary": "생성된 백엔드 코드 설명"
-}
+반드시 아래 XML 형식으로만 응답해라. JSON 절대 금지.
+코드 안에 특수문자가 있어도 그대로 출력해라 — 이스케이프 불필요.
+
+<output framework="FastAPI" summary="생성된 백엔드 코드 한 줄 요약">
+<file path="backend/main.py" language="python">
+전체 코드
+</file>
+<file path="backend/database.py" language="python">
+전체 코드
+</file>
+<file path="backend/models.py" language="python">
+전체 코드
+</file>
+<file path="backend/schemas.py" language="python">
+전체 코드
+</file>
+<file path="backend/routes/__init__.py" language="python">
+</file>
+<file path="backend/routes/items.py" language="python">
+전체 코드
+</file>
+<file path="backend/utils.py" language="python">
+전체 코드
+</file>
+<file path="backend/requirements.txt" language="text">
+의존성 목록
+</file>
+</output>
 """

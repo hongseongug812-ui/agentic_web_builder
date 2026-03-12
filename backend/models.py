@@ -74,6 +74,7 @@ class OrchestrateRequest(BaseModel):
     prompt: str = Field(..., min_length=1, max_length=10000)
     max_rounds: int = Field(default=3, ge=1, le=5, description="최대 토론 라운드 수")
     provider: str = Field(default="gemini", description="LLM 프로바이더: gemini, claude, gpt")
+    lite_mode: bool = Field(default=False, description="경량 모드: 토론·QA 생략, 3-call 파이프라인 (20~40초)")
 
     @field_validator("prompt")
     @classmethod
