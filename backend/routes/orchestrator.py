@@ -86,7 +86,9 @@ from services.analytics_db import (
     create_session,
     complete_session,
     build_learning_context,
+    log_token_usage,
 )
+from context import get_context_manager
 
 logger = logging.getLogger(__name__)
 
@@ -147,13 +149,16 @@ async def _run_lite_pipeline(
     )
     debate_log.extend(fe_log)
 
-    # ── Step 3: QA (간소화, 1회만) ──
-    from services.prompt_builder import build_qa_prompt
-    fe_code_preview = "\n---\n".join(
-        f"// {f.path}\n{f.code[:200]}{'...' if len(f.code) > 200 else ''}"
-        for f in (final_code.files if final_code else [])[:2]
+    # ── Step 3: QA (간소화, 1회만, Phase 2-4: ContextManager 적용) ──
+    ctx_mgr = get_context_manager()
+    fe_file_dicts = [f.model_dump() for f in (final_code.files if final_code else [])]
+    qa_prompt = ctx_mgr.build_qa_context(
+        plan_json=plan_json,
+        fe_files=fe_file_dicts,
+        be_files=None,
+        user_prompt=safe_prompt,
+        code_review_feedback="",
     )
-    qa_prompt = build_qa_prompt(plan_json, fe_code_preview, len(final_code.files if final_code else []), "", 0, "", safe_prompt)
     try:
         qa_passed, qa_score, _, _, _, qa_log = await run_qa_review(
             llm, qa_prompt, QA_REVIEW_PROMPT, 1, 1, provider,
@@ -406,25 +411,35 @@ async def orchestrate(request: OrchestrateRequest):
         )
         debate_log.extend(be_gen_log)
 
-        # QA 검수 (Phase 03: auto-pass 제거, Phase 04: 미리보기 압축)
-        fe_code_preview = "\n---\n".join(
-            f"// {f.path}\n{f.code[:300]}{'...(생략)' if len(f.code) > 300 else ''}"
-            for f in (final_code.files if final_code else [])[:3]
+        # QA 검수 (Phase 2-4: ContextManager로 파일 우선순위 + 토큰 예산 적용)
+        ctx_mgr = get_context_manager()
+        fe_file_dicts = [f.model_dump() for f in (final_code.files if final_code else [])]
+        be_file_dicts = [f.model_dump() for f in (backend_code.files if backend_code else [])]
+        qa_prompt = ctx_mgr.build_qa_context(
+            plan_json=plan_json,
+            fe_files=fe_file_dicts,
+            be_files=be_file_dicts if be_file_dicts else None,
+            user_prompt=request.prompt,
+            code_review_feedback=code_review.feedback,
         )
-        be_code_preview = "\n---\n".join(
-            f"# {f.path}\n{f.code[:300]}{'...(생략)' if len(f.code) > 300 else ''}"
-            for f in (backend_code.files if backend_code else [])[:3]
-        )
-        qa_prompt = build_qa_prompt(
-            plan_json, fe_code_preview, len(final_code.files) if final_code else 0,
-            be_code_preview, len(backend_code.files) if backend_code else 0,
-            code_review.feedback, request.prompt,
-        )
+        # 토큰 사용량 추정 + 기록
+        qa_input_tokens = ctx_mgr.count_tokens(qa_prompt)
+        logger.info("QA 컨텍스트 — 입력 토큰: %d", qa_input_tokens)
         try:
-            qa_passed, qa_score, _, _, _, qa_log = await run_qa_review(
+            qa_passed, qa_score, qa_feedback, _, _, qa_log = await run_qa_review(
                 llm, qa_prompt, QA_REVIEW_PROMPT, qa_attempt, qa_max_attempts, provider,
             )
             debate_log.extend(qa_log)
+            # 토큰 사용량 추정 기록 및 브로드캐스트
+            qa_output_est = ctx_mgr.count_tokens(qa_feedback or "")
+            try:
+                log_token_usage(session_id, "qa-agent", "qa_review", provider, qa_input_tokens, qa_output_est)
+            except Exception:
+                pass
+            await manager.broadcast("token_usage", {
+                "agent": "qa-agent", "stage": "qa_review",
+                "input_tokens": qa_input_tokens, "output_tokens": qa_output_est,
+            })
         except HTTPException as e:
             # Phase 03: QA LLM 실패 → 경고 브로드캐스트 후 파이프라인 완료
             logger.warning("QA 검수 실패 — 코드는 반환 (경고): %s", str(e))

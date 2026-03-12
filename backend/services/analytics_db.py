@@ -7,7 +7,7 @@
 테이블:
   - sessions: 생성 세션 (템플릿, 색상, 기능 등)
   - ratings: 사용자 만족도 평가
-  - popular_combos: 인기 조합 캐시 (집계 뷰)
+  - token_usage: 에이전트별 토큰 사용량 (Phase 2-4)
 """
 
 import sqlite3
@@ -66,11 +66,26 @@ def init_db():
             FOREIGN KEY (session_id) REFERENCES sessions(id)
         );
 
+        -- 토큰 사용량 추적 (Phase 2-4)
+        CREATE TABLE IF NOT EXISTS token_usage (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id INTEGER,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            agent TEXT NOT NULL,         -- cto-agent / fe-lead-agent / ...
+            stage TEXT NOT NULL,         -- planning / code_gen / qa_review / ...
+            provider TEXT,               -- gpt / claude / gemini
+            input_tokens INTEGER NOT NULL DEFAULT 0,
+            output_tokens INTEGER NOT NULL DEFAULT 0,
+            estimated_cost_usd REAL DEFAULT 0.0
+        );
+
         -- 성공 패턴 인덱스
         CREATE INDEX IF NOT EXISTS idx_sessions_template ON sessions(template_id);
         CREATE INDEX IF NOT EXISTS idx_sessions_color ON sessions(color_name);
         CREATE INDEX IF NOT EXISTS idx_sessions_status ON sessions(status);
         CREATE INDEX IF NOT EXISTS idx_ratings_score ON ratings(score);
+        CREATE INDEX IF NOT EXISTS idx_token_usage_session ON token_usage(session_id);
+        CREATE INDEX IF NOT EXISTS idx_token_usage_agent ON token_usage(agent);
     """)
     conn.commit()
     conn.close()
@@ -157,6 +172,59 @@ def add_rating(
     conn.commit()
     conn.close()
     logger.info("평가 기록: 세션 #%d → 점수 %d/5", session_id, score)
+
+
+# 모델별 토큰 단가 (USD/1M 토큰 기준, 2025-03 기준 참고값)
+_COST_PER_1M: dict[str, tuple[float, float]] = {
+    "gpt":    (5.0,  15.0),   # gpt-4o: input $5, output $15
+    "claude": (3.0,  15.0),   # claude-3.5-sonnet: $3/$15
+    "gemini": (1.25,  5.0),   # gemini-2.5-pro preview
+}
+
+
+def log_token_usage(
+    session_id: int,
+    agent: str,
+    stage: str,
+    provider: str,
+    input_tokens: int,
+    output_tokens: int,
+):
+    """에이전트 LLM 호출의 토큰 사용량을 기록합니다."""
+    in_cost, out_cost = _COST_PER_1M.get(provider, (5.0, 15.0))
+    estimated_usd = (input_tokens * in_cost + output_tokens * out_cost) / 1_000_000
+
+    conn = get_db()
+    conn.execute(
+        """INSERT INTO token_usage
+        (session_id, agent, stage, provider, input_tokens, output_tokens, estimated_cost_usd)
+        VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        (session_id, agent, stage, provider, input_tokens, output_tokens, estimated_usd),
+    )
+    conn.commit()
+    conn.close()
+    logger.debug(
+        "토큰 사용: [%s/%s] input=%d, output=%d, $%.4f",
+        agent, stage, input_tokens, output_tokens, estimated_usd,
+    )
+
+
+def get_token_stats(session_id: Optional[int] = None) -> dict:
+    """세션(또는 전체)의 토큰 사용 통계를 반환합니다."""
+    conn = get_db()
+    where = "WHERE session_id = ?" if session_id else ""
+    params = (session_id,) if session_id else ()
+
+    row = conn.execute(f"""
+        SELECT
+            SUM(input_tokens) as total_input,
+            SUM(output_tokens) as total_output,
+            SUM(estimated_cost_usd) as total_cost_usd,
+            COUNT(*) as call_count
+        FROM token_usage {where}
+    """, params).fetchone()
+    conn.close()
+    return dict(row) if row else {}
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
