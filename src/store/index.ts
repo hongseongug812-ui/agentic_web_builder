@@ -39,3 +39,6 @@ export type { TemplateIR, ComponentIR, SlotIR, SlotType, PageIR, StyleTokens } f
 
 export { useUIStore } from "./uiStore";
 export type { BottomTab } from "./uiStore";
+
+export { useAuthStore } from "./authStore";
+export type { AuthStore } from "./authStore";
