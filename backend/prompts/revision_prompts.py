@@ -3,8 +3,10 @@
 ========================
 """
 
+from .guardrails import USER_INPUT_GUARDRAIL
+
 # ── 사용자 수정 반영 ──
-REVISION_PROMPT = """\
+REVISION_PROMPT = USER_INPUT_GUARDRAIL + """\
 너는 FE 팀장이다. 사용자의 수정 요청을 반영하여 코드를 수정해라.
 기존 코드의 좋은 부분은 유지하면서 요청사항만 정확히 반영해라.
 

@@ -4,6 +4,8 @@
 FE Lead (코드 생성 + 리뷰) / FE Dev (리뷰 + 코드 리뷰)
 """
 
+from .guardrails import USER_INPUT_GUARDRAIL
+
 # ── FE Lead 기획 리뷰 ──
 FE_LEAD_REVIEW_PROMPT = """\
 너는 10년 경력의 시니어 프론트엔드 팀장이다.
@@ -38,7 +40,7 @@ FE_DEV_REVIEW_PROMPT = """\
 
 
 # ── FE Lead 코드 생성 (기본 프롬프트 — prompt_builder가 동적으로 보강) ──
-FE_LEAD_GENERATE_PROMPT = """\
+FE_LEAD_GENERATE_PROMPT = USER_INPUT_GUARDRAIL + """\
 너는 수상 경력이 있는 세계적 수준의 시니어 프론트엔드 팀장이자 UI/UX 디자이너야.
 확정된 기획서 + 사용자의 디자인 요구사항을 바탕으로 **실제 서비스 수준의 반응형 웹사이트**를 만들어.
 

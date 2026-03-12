@@ -50,7 +50,7 @@ AVAILABLE_MODELS = {
 # LLM 호출 타임아웃 (초)
 LLM_TIMEOUT = 300
 # JSON 파싱 재시도 횟수
-MAX_JSON_RETRIES = 2
+MAX_JSON_RETRIES = 3
 
 
 # ──────────────────────────────────────────────
@@ -80,6 +80,10 @@ class GeminiProvider(LLMProvider):
         model = genai.GenerativeModel(
             model_name=AVAILABLE_MODELS["gemini"]["model_id"],
             system_instruction=system_prompt,
+            # JSON 응답 강제 → 파싱 실패 방지
+            generation_config=genai.GenerationConfig(
+                response_mime_type="application/json",
+            ),
         )
 
         # Gemini SDK는 동기적이므로 run_in_executor로 Non-blocking 처리
@@ -112,16 +116,21 @@ class ClaudeProvider(LLMProvider):
             message = await asyncio.wait_for(
                 client.messages.create(
                     model=AVAILABLE_MODELS["claude"]["model_id"],
-                    max_tokens=4096,
+                    max_tokens=8192,
                     system=system_prompt,
-                    messages=[{"role": "user", "content": user_prompt}],
+                    # assistant 프리필 "{" → Claude가 JSON으로 시작하도록 강제
+                    messages=[
+                        {"role": "user", "content": user_prompt},
+                        {"role": "assistant", "content": "{"},
+                    ],
                 ),
                 timeout=LLM_TIMEOUT,
             )
         except asyncio.TimeoutError:
             raise HTTPException(status_code=504, detail=f"Claude 응답 타임아웃 ({LLM_TIMEOUT}초)")
 
-        return message.content[0].text
+        # 프리필 "{" + 나머지 응답 합치기
+        return "{" + message.content[0].text
 
 
 # ──────────────────────────────────────────────
@@ -146,6 +155,8 @@ class GPTProvider(LLMProvider):
                         {"role": "user", "content": user_prompt},
                     ],
                     temperature=0.7,
+                    # JSON 응답 강제 → 파싱 실패 방지
+                    response_format={"type": "json_object"},
                 ),
                 timeout=LLM_TIMEOUT,
             )
@@ -216,6 +227,22 @@ def parse_llm_json(raw_text: str) -> dict:
         return json.loads(cleaned2)
     except json.JSONDecodeError:
         pass
+
+    # 전략 4: 가장 바깥쪽 JSON 객체를 스캔하며 점진적 파싱
+    for start in range(len(raw_text)):
+        if raw_text[start] == '{':
+            depth = 0
+            for end in range(start, len(raw_text)):
+                if raw_text[end] == '{':
+                    depth += 1
+                elif raw_text[end] == '}':
+                    depth -= 1
+                    if depth == 0:
+                        try:
+                            return json.loads(raw_text[start:end + 1])
+                        except json.JSONDecodeError:
+                            break
+            break
 
     logger.error("JSON 파싱 실패 — 원본: %s", raw_text[:500])
     raise HTTPException(

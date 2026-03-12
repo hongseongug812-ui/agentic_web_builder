@@ -72,6 +72,7 @@ from routes.websocket import router as ws_router
 from routes.export import router as export_router
 from routes.preview_deploy import router as preview_router
 from routes.analytics import router as analytics_router
+from routes.upload import router as upload_router
 from llm_provider import get_available_providers
 from services.analytics_db import init_db
 
@@ -114,7 +115,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["Content-Type", "Authorization"],
 )
 
@@ -199,6 +200,14 @@ app.include_router(ws_router)
 app.include_router(export_router)
 app.include_router(preview_router)
 app.include_router(analytics_router)
+app.include_router(upload_router)
+
+# 업로드된 이미지 정적 서빙
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path as _Path
+_uploads_dir = _Path(__file__).parent / "uploads"
+_uploads_dir.mkdir(exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(_uploads_dir)), name="uploads")
 
 
 # ──────────────────────────────────────────────

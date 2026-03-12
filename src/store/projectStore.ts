@@ -1,22 +1,7 @@
 import { create } from "zustand";
 
-export type AgentStatus = "idle" | "working" | "done" | "error";
-
-export interface AgentState {
-    id: string;
-    name: string;
-    role: "user" | "pm" | "frontend" | "backend";
-    status: AgentStatus;
-}
-
-/* ── Debate Message (matches backend) ── */
-export interface DebateMessage {
-    agent: string;
-    round: number;
-    message_type: "plan" | "review" | "be_review" | "revision" | "approval" | "code" | "be_code" | "qa_pass" | "qa_fail";
-    content: string;
-    data?: Record<string, unknown>;
-}
+/* ── API Config ── */
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 /* ── Template Data ── */
 export interface TemplateItem {
@@ -463,10 +448,6 @@ export const ANIMATION_OPTIONS = [
     { id: "playful", name: "플레이풀", description: "바운스, 스프링, 패럴랙스" },
 ] as const;
 
-const defaultFeatures: FeaturesMap = Object.fromEntries(
-    featureOptions.map((f) => [f, false])
-) as FeaturesMap;
-
 /* ── Provider Types ── */
 export interface LLMProviderInfo {
     id: string;
@@ -475,41 +456,27 @@ export interface LLMProviderInfo {
     configured: boolean;
 }
 
-/* ── API Config ── */
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-const WS_BASE = API_BASE.replace(/^http/, "ws");
+/* ── Uploaded Image ── */
+export interface UploadedImage {
+    id: string;
+    filename: string;
+    originalName: string;
+    url: string;
+    label: string;
+    size: number;
+}
+
+/* ── Default values ── */
+const defaultFeatures: FeaturesMap = Object.fromEntries(
+    featureOptions.map((f) => [f, false])
+) as FeaturesMap;
+
+const defaultStyleHistory: Record<string, string> = Object.fromEntries(
+    TEMPLATES.map((t) => [t.id, STYLES_MAP[t.id]?.[0]?.id ?? ""])
+);
 
 /* ── Store Interface ── */
-interface FlowStore {
-    /* View */
-    currentView: "setup" | "canvas";
-    setView: (v: "setup" | "canvas") => void;
-
-    /* React Flow */
-    agents: AgentState[];
-    isRunning: boolean;
-    selectedNodeId: string | null;
-    lastGeneratedPrompt: string | null;
-    isSidebarCollapsed: boolean;
-    setAgentStatus: (id: string, status: AgentStatus) => void;
-    resetAllAgents: () => void;
-    selectNode: (id: string | null) => void;
-    setSidebarCollapsed: (v: boolean) => void;
-
-    /* Debate & Output */
-    agentOutputData: Record<string, unknown>;
-    debateMessages: DebateMessage[];
-    currentRound: number;
-    error: string | null;
-    setError: (e: string | null) => void;
-    clearDebate: () => void;
-
-    /* Pipeline Progress */
-    pipelineStep: number;
-    pipelineTotal: number;
-    pipelineLabel: string;
-    retryAvailable: boolean;
-
+interface ProjectStore {
     /* Template Builder */
     selectedTemplateId: string;
     selectedStyleId: string;
@@ -540,67 +507,14 @@ interface FlowStore {
     setProvider: (p: string) => void;
     fetchProviders: () => void;
 
-    /* Core action */
-    runSequence: () => void;
-    retrySequence: () => void;
+    /* Image Upload */
+    uploadedImages: UploadedImage[];
+    addUploadedImage: (img: UploadedImage) => void;
+    removeUploadedImage: (id: string) => void;
+    updateImageLabel: (id: string, label: string) => void;
 }
 
-const defaultAgents: AgentState[] = [
-    { id: "user-input", name: "사용자 입력", role: "user", status: "idle" },
-    { id: "cto-agent", name: "🧑‍💼 CTO", role: "pm", status: "idle" },
-    { id: "fe-lead-agent", name: "👨‍💻 FE Lead", role: "frontend", status: "idle" },
-    { id: "fe-dev-agent", name: "👩‍💻 FE Dev", role: "frontend", status: "idle" },
-    { id: "be-lead-agent", name: "🔧 BE Lead", role: "backend", status: "idle" },
-    { id: "be-dev-agent", name: "🔩 BE Dev", role: "backend", status: "idle" },
-    { id: "qa-agent", name: "🔍 QA", role: "pm", status: "idle" },
-];
-
-const defaultStyleHistory: Record<string, string> = Object.fromEntries(
-    TEMPLATES.map((t) => [t.id, STYLES_MAP[t.id]?.[0]?.id ?? ""])
-);
-
-export const useFlowStore = create<FlowStore>((set, get) => ({
-    /* ── View ── */
-    currentView: "setup" as "setup" | "canvas",
-    setView: (v) => set({ currentView: v }),
-
-    /* ── React Flow ── */
-    agents: defaultAgents.map((a) => ({ ...a })),
-    isRunning: false,
-    selectedNodeId: null,
-    lastGeneratedPrompt: null,
-    isSidebarCollapsed: false,
-
-    setAgentStatus: (id, status) =>
-        set((state) => ({
-            agents: state.agents.map((a) => (a.id === id ? { ...a, status } : a)),
-        })),
-
-    resetAllAgents: () =>
-        set({
-            agents: defaultAgents.map((a) => ({
-                ...a,
-                status: "idle" as AgentStatus,
-            })),
-        }),
-
-    selectNode: (id) => set({ selectedNodeId: id }),
-    setSidebarCollapsed: (v) => set({ isSidebarCollapsed: v }),
-
-    /* ── Debate & Output ── */
-    agentOutputData: {},
-    debateMessages: [],
-    currentRound: 0,
-    error: null,
-    setError: (e) => set({ error: e }),
-    clearDebate: () => set({ debateMessages: [], agentOutputData: {}, currentRound: 0, error: null, pipelineStep: 0, pipelineLabel: "" }),
-
-    /* Pipeline Progress */
-    pipelineStep: 0,
-    pipelineTotal: 20,
-    pipelineLabel: "",
-    retryAvailable: false,
-
+export const useProjectStore = create<ProjectStore>((set, get) => ({
     /* ── Template Builder ── */
     selectedTemplateId: "campus-hub",
     selectedStyleId: STYLES_MAP["saas"]?.[0]?.id ?? "hero-cta",
@@ -631,7 +545,7 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
     setPromptMode: (m) => set({ promptMode: m }),
     setManualPrompt: (p) => set({ manualPrompt: p }),
 
-    /* Section Builder */
+    /* ── Section Builder ── */
     selectedSections: ["nav", "hero", "features", "footer"],
     designTokens: { font: "inter", borderRadius: "md", spacing: "normal", layout: "centered", animation: "subtle" },
     addSection: (id) => set((s) => ({
@@ -660,15 +574,27 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
             if (res.ok) {
                 const providers = await res.json();
                 set({ availableProviders: providers });
-                // Auto-select first configured provider
                 const configured = providers.find((p: LLMProviderInfo) => p.configured);
                 if (configured) set({ selectedProvider: configured.id });
             }
         } catch { /* silent */ }
     },
 
+    /* ── Image Upload ── */
+    uploadedImages: [],
+    addUploadedImage: (img) => set((s) => ({
+        uploadedImages: [...s.uploadedImages, img],
+    })),
+    removeUploadedImage: (id) => set((s) => ({
+        uploadedImages: s.uploadedImages.filter((i) => i.id !== id),
+    })),
+    updateImageLabel: (id, label) => set((s) => ({
+        uploadedImages: s.uploadedImages.map((i) => i.id === id ? { ...i, label } : i),
+    })),
+
+    /* ── Generate Prompt ── */
     generatePrompt: () => {
-        const { promptMode, manualPrompt, selectedTemplateId, selectedStyleId, selectedColor, features, selectedSections, designTokens } = get();
+        const { promptMode, manualPrompt, selectedTemplateId, selectedStyleId, selectedColor, features, selectedSections, designTokens, uploadedImages } = get();
         if (promptMode === "manual" && manualPrompt.trim()) return manualPrompt;
 
         const templateName = getTemplateName(selectedTemplateId);
@@ -677,9 +603,6 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
             .filter(([, v]) => v)
             .map(([k]) => k);
 
-        // ──────────────────────────────────────
-        // 🎨 템플릿 컨셉별 톤 & 무드 가이드
-        // ──────────────────────────────────────
         const templateToneGuides: Record<string, string> = {
             "saas": `B2B SaaS 전환 최적화 랜딩. 신뢰감 + 기술력을 동시에 전달.
   - 히어로에 제품 대시보드 목업 또는 3D 일러스트 공간을 비워둬
@@ -763,9 +686,6 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
   - 트레이너 프로필 (수상 경력, 전문 분야)`,
         };
 
-        // ──────────────────────────────────────
-        // 🏗️ 섹션별 하이퀄리티 상세 스펙
-        // ──────────────────────────────────────
         const sectionSpecs: Record<string, string> = {
             nav: `🧭 내비게이션 바:
   [구조]
@@ -925,7 +845,7 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
   - 하단에 소셜 미디어 아이콘 row
   [우측 - 폼]
   - 입력 필드: 이름, 이메일 (2열), 주제(선택), 메시지(textarea 4줄)
-  - 필드 스타일: bg-white/5, border: 1px solid white/10, 
+  - 필드 스타일: bg-white/5, border: 1px solid white/10,
     focus: border-color 메인컬러, outline: none, ring: 2px 메인컬러/30
   - 전송 버튼: width 100%, gradient 배경, font-weight: 700
   - 하단 disclaimer: text-xs, "제출 시 개인정보처리방침에 동의합니다"`,
@@ -959,9 +879,6 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
   - padding-top: 2rem, mt-3rem`,
         };
 
-        // ──────────────────────────────────────
-        // 🎨 색상별 정밀 CSS 변수 가이드
-        // ──────────────────────────────────────
         const colorPalettes: Record<string, string> = {
             Blue: `메인: #3b82f6(blue-500), 서브: #06b6d4(cyan-500)
   배경: #030712(gray-950), 서피스: rgba(255,255,255,0.03)
@@ -1012,9 +929,6 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
   특수: 사이버펑크 — 글리치/스캔라인 효과 고려`,
         };
 
-        // ──────────────────────────────────────
-        // 🎬 애니메이션 레벨별 구현 가이드
-        // ──────────────────────────────────────
         const animationGuides: Record<string, string> = {
             none: `애니메이션 없음. hover 효과만 적용.
   - transition: all 0.3s ease on interactive elements
@@ -1049,9 +963,6 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
   - 이미지 hover: 3D tilt 효과 (perspective + rotateX/Y)`,
         };
 
-        // ──────────────────────────────────────
-        // 📝 디자인 토큰 정밀 설명
-        // ──────────────────────────────────────
         const fontName = FONT_OPTIONS.find((f) => f.id === designTokens.font)?.name ?? designTokens.font;
         const fontPreview = FONT_OPTIONS.find((f) => f.id === designTokens.font)?.preview ?? "";
         const radiusName = RADIUS_OPTIONS.find((r) => r.id === designTokens.borderRadius)?.name ?? designTokens.borderRadius;
@@ -1059,6 +970,8 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
         const spacingName = SPACING_OPTIONS.find((s) => s.id === designTokens.spacing)?.name ?? designTokens.spacing;
         const layoutName = LAYOUT_OPTIONS.find((l) => l.id === designTokens.layout)?.name ?? designTokens.layout;
         const animName = ANIMATION_OPTIONS.find((a) => a.id === designTokens.animation)?.name ?? designTokens.animation;
+
+        void spacingName; void layoutName;
 
         const spacingGuide: Record<string, string> = {
             compact: "섹션 padding: 3rem 1rem, 요소 간 gap: 1rem, 카드 padding: 1.25rem",
@@ -1071,12 +984,10 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
             sidebar: "좌측 사이드바(width 260px, fixed) + 우측 메인 콘텐츠 (margin-left: 260px)",
         };
 
-        // 섹션 스펙 조합
         const sectionDetails = selectedSections
             .map((id) => sectionSpecs[id] || `- ${id}`)
             .join("\n\n");
 
-        // 기능 상세
         const featureDetails = enabledFeatures.map((f) => {
             const specs: Record<string, string> = {
                 "로그인": `로그인/회원가입:
@@ -1113,12 +1024,8 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
             return `${specs[f] || `- ${f}`}`;
         }).join("\n\n");
 
-        // 톤 가이드
         const toneGuide = templateToneGuides[selectedTemplateId] || `${templateName} 컨셉에 맞는 전문적이고 현대적인 분위기.`;
 
-        // ──────────────────────────────────────
-        // 📋 최종 프롬프트 조합
-        // ──────────────────────────────────────
         return `너는 세계적 수준의 프론트엔드 개발자 겸 UI/UX 디자이너야.
 "${templateName}" 컨셉의 프리미엄 웹사이트를 만들어줘.
 스타일: "${styleName}" 레이아웃.
@@ -1175,216 +1082,12 @@ ${enabledFeatures.length > 0 ? `━━━━━━━━━━━━━━━━
 8. **가격/숫자**: 한국 원화(₩) 또는 달러($) 포맷으로, 천 단위 콤마 포함
 
 ### ❌ 하지 말 것 (안티 패턴)
-- 외부 이미지 URL 사용 금지 (깨질 수 있음) → CSS gradient/SVG/이모지로 대체
+- 외부 이미지 URL 사용 금지 (깨질 수 있음) → CSS gradient/SVG/이모지로 대체 (단, 사용자가 업로드한 이미지는 예외)
 - 빈 href="#" 링크만 나열하지 말 것 → 실제 메뉴명/텍스트 포함
 - 카드 내용이 전부 동일하면 안 됨 → 각 카드마다 다른 구체적 내용
 - 너무 작은 텍스트(12px↓) 또는 너무 낮은 대비 금지
-- JavaScript 프레임워크 의존 금지 → 순수 HTML + CSS + 최소 vanilla JS만`;
-    },
+- JavaScript 프레임워크 의존 금지 → 순수 HTML + CSS + 최소 vanilla JS만`
 
-    /* ── Run Sequence: WebSocket + API 호출 ── */
-    runSequence: () => {
-        const { isRunning, generatePrompt, setAgentStatus } = get();
-        if (isRunning) return;
-
-        const prompt = generatePrompt();
-        set({
-            lastGeneratedPrompt: prompt,
-            currentView: "canvas",
-            isSidebarCollapsed: true,
-            isRunning: true,
-            error: null,
-        });
-        get().resetAllAgents();
-        get().clearDebate();
-
-        // 1) 사용자 입력 노드 완료
-        setAgentStatus("user-input", "working");
-        setTimeout(() => {
-            setAgentStatus("user-input", "done");
-            set((state) => ({
-                agentOutputData: {
-                    ...state.agentOutputData,
-                    "user-input": {
-                        type: "user_prompt",
-                        content: prompt,
-                        timestamp: new Date().toISOString(),
-                    },
-                },
-            }));
-        }, 600);
-
-        // 2) WebSocket 연결
-        let ws: WebSocket | null = null;
-        try {
-            ws = new WebSocket(`${WS_BASE}/ws/status`);
-        } catch {
-            // WebSocket 연결 실패 시에도 API는 호출
-        }
-
-        if (ws) {
-            ws.onmessage = (event) => {
-                try {
-                    const msg = JSON.parse(event.data);
-                    const { event: evtType, data } = msg;
-
-                    if (evtType === "agent_start" && data?.agent) {
-                        setAgentStatus(data.agent, "working");
-                        if (data.round) set({ currentRound: data.round });
-
-                        // Pipeline progress tracking
-                        const labelMap: Record<string, string> = {
-                            "cto-agent": data.action === "revising" ? `CTO 기획서 수정 (R${data.round})` : "CTO 기획서 작성",
-                            "fe-lead-agent": data.action === "reviewing" ? `FE Lead 리뷰 (R${data.round})` : data.action === "generating" ? "FE Lead 코드 생성" : data.action === "revising" ? "FE Lead 코드 수정" : "FE Lead",
-                            "fe-dev-agent": data.action === "reviewing" ? `FE Dev 리뷰 (R${data.round})` : data.action === "code_review" ? "FE Dev 코드 리뷰" : "FE Dev",
-                            "be-lead-agent": data.action === "reviewing" ? `BE Lead 리뷰 (R${data.round})` : data.action === "generating" ? "BE Lead 코드 생성" : "BE Lead",
-                            "be-dev-agent": data.action === "reviewing" ? `BE Dev 리뷰 (R${data.round})` : "BE Dev",
-                            "qa-agent": "QA 최종 검수",
-                        };
-                        set((state) => ({
-                            pipelineStep: state.pipelineStep + 0.5,
-                            pipelineLabel: labelMap[data.agent] || data.action || "",
-                        }));
-                    } else if (evtType === "agent_done" && data?.agent) {
-                        setAgentStatus(data.agent, "done");
-                        set((state) => ({ pipelineStep: state.pipelineStep + 0.5 }));
-                    } else if (evtType === "debate_message" && data) {
-                        set((state) => ({
-                            debateMessages: [...state.debateMessages, data as DebateMessage],
-                        }));
-                    } else if (evtType === "code_revised" && data?.files) {
-                        // 수정된 코드를 store에 업데이트
-                        set((state) => ({
-                            agentOutputData: {
-                                ...state.agentOutputData,
-                                "frontend-agent": {
-                                    type: "generated_code",
-                                    data: { files: data.files, framework: "Next.js 14", summary: data.summary || "" },
-                                },
-                                "fe-lead-agent": {
-                                    type: "generated_code",
-                                    data: { files: data.files, framework: "Next.js 14", summary: data.summary || "" },
-                                },
-                            },
-                        }));
-                    } else if (evtType === "pipeline_complete") {
-                        set({ isRunning: false, pipelineLabel: "완료", retryAvailable: false });
-                    } else if (evtType === "error") {
-                        set({ error: data?.message || "알 수 없는 오류", isRunning: false, retryAvailable: true });
-                    }
-                } catch {
-                    /* ignore parse errors */
-                }
-            };
-            ws.onerror = () => {
-                /* silent — API call will still work */
-            };
-            // WebSocket reconnection with exponential backoff
-            let wsRetryCount = 0;
-            ws.onclose = () => {
-                if (get().isRunning && wsRetryCount < 3) {
-                    const delay = Math.min(1000 * Math.pow(2, wsRetryCount), 8000);
-                    wsRetryCount++;
-                    setTimeout(() => {
-                        try {
-                            const newWs = new WebSocket(`${WS_BASE}/ws/status`);
-                            newWs.onmessage = ws!.onmessage;
-                            newWs.onerror = ws!.onerror;
-                            newWs.onclose = ws!.onclose;
-                            ws = newWs;
-                        } catch { /* silent */ }
-                    }, delay);
-                }
-            };
-        }
-
-        // 3) POST /api/orchestrate 호출 (WebSocket 연결 후 바로 실행)
-        (async () => {
-            try {
-                const res = await fetch(`${API_BASE}/api/orchestrate`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ prompt, max_rounds: 3, provider: get().selectedProvider }),
-                });
-
-                if (!res.ok) {
-                    const errData = await res.json().catch(() => ({ detail: "서버 오류" }));
-                    set({
-                        error: errData.detail || `서버 오류 (${res.status})`,
-                        isRunning: false,
-                        retryAvailable: true,
-                    });
-                    setAgentStatus("cto-agent", "error");
-                    setAgentStatus("fe-lead-agent", "error");
-                    setAgentStatus("fe-dev-agent", "error");
-                    setAgentStatus("be-lead-agent", "error");
-                    setAgentStatus("be-dev-agent", "error");
-                    setAgentStatus("qa-agent", "error");
-                    ws?.close();
-                    return;
-                }
-
-                const result = await res.json();
-
-                // 에이전트 출력 저장
-                set((state) => ({
-                    agentOutputData: {
-                        ...state.agentOutputData,
-                        "cto-agent": {
-                            type: "project_plan",
-                            data: result.plan,
-                            rounds: result.total_rounds,
-                        },
-                        "frontend-agent": {
-                            type: "generated_code",
-                            data: result.code,
-                        },
-                        "fe-lead-agent": {
-                            type: "generated_code",
-                            data: result.code,
-                        },
-                        "backend-agent": {
-                            type: "generated_code",
-                            data: result.backend_code,
-                        },
-                        "be-lead-agent": {
-                            type: "generated_code",
-                            data: result.backend_code,
-                        },
-                    },
-                    debateMessages: result.debate_log || state.debateMessages,
-                    isRunning: false,
-                }));
-
-                setAgentStatus("cto-agent", "done");
-                setAgentStatus("fe-lead-agent", "done");
-                setAgentStatus("fe-dev-agent", "done");
-                setAgentStatus("be-lead-agent", result.backend_code ? "done" : "idle");
-                setAgentStatus("be-dev-agent", result.backend_code ? "done" : "idle");
-                setAgentStatus("qa-agent", "done");
-            } catch (err) {
-                set({
-                    error: err instanceof Error ? err.message : "네트워크 오류",
-                    isRunning: false,
-                    retryAvailable: true,
-                });
-                setAgentStatus("cto-agent", "error");
-                setAgentStatus("fe-lead-agent", "error");
-                setAgentStatus("fe-dev-agent", "error");
-                setAgentStatus("be-lead-agent", "error");
-                setAgentStatus("be-dev-agent", "error");
-                setAgentStatus("qa-agent", "error");
-            } finally {
-                ws?.close();
-            }
-        })();
-    },
-
-    /* ── Retry ── */
-    retrySequence: () => {
-        const { retryAvailable } = get();
-        if (!retryAvailable) return;
-        set({ error: null, retryAvailable: false, pipelineStep: 0, pipelineLabel: "" });
-        get().runSequence();
+            + (uploadedImages.length > 0 ? `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n## 📸 사용자 업로드 이미지\n\n다음은 사용자가 직접 업로드한 이미지입니다. 해당 이미지를 반드시 <img src="URL"> 태그로 적절한 위치에 사용하세요.\nCSS gradient 플레이스홀더 대신 이 실제 이미지를 우선적으로 활용하세요.\n\n${uploadedImages.map((img, i) => `${i + 1}. **${img.label || img.originalName}**\n   - URL: \`${API_BASE}${img.url}\`\n   - 용도: ${img.label || "자유롭게 배치"}`).join("\n\n")}\n\n> 위 이미지들은 실제 접근 가능한 URL이므로 <img src="...">로 직접 사용하세요.` : "");
     },
 }));

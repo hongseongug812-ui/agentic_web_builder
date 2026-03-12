@@ -1,13 +1,13 @@
 "use client";
 
 import { Key, ExternalLink, CheckCircle2, XCircle } from "lucide-react";
-import { useFlowStore } from "@/store/store";
+import { useProjectStore } from "@/store";
 
 /**
  * API 키 설정 가이드 — 프로바이더가 전혀 설정되지 않았을 때 표시
  */
 export default function SetupGuide() {
-    const providers = useFlowStore((s) => s.availableProviders);
+    const providers = useProjectStore((s) => s.availableProviders);
 
     // 로딩 중이거나 프로바이더가 아직 없으면 표시 X
     if (providers.length === 0) return null;

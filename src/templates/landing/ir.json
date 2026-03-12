@@ -1,0 +1,182 @@
+{
+  "id": "landing-001",
+  "name": "모던 랜딩페이지",
+  "category": "landing",
+  "description": "깔끔한 원페이지 랜딩 사이트",
+  "previewImage": "",
+  "pages": [
+    {
+      "id": "page-main",
+      "route": "/",
+      "title": "메인",
+      "components": [
+        {
+          "id": "comp-navbar",
+          "type": "Navbar",
+          "order": 0,
+          "visible": true,
+          "slots": {
+            "logo": { "type": "text", "value": "MyBrand", "editable": true, "label": "로고 텍스트", "placeholder": "브랜드명" },
+            "menuItems": {
+              "type": "list",
+              "value": ["Features", "Pricing", "About", "Contact"],
+              "editable": true,
+              "label": "메뉴 항목"
+            },
+            "ctaText": { "type": "text", "value": "시작하기", "editable": true, "label": "CTA 버튼 텍스트" },
+            "ctaLink": { "type": "link", "value": "#contact", "editable": true, "label": "CTA 버튼 링크" }
+          }
+        },
+        {
+          "id": "comp-hero",
+          "type": "Hero",
+          "order": 1,
+          "visible": true,
+          "slots": {
+            "title": { "type": "text", "value": "더 빠르게, 더 스마트하게", "editable": true, "label": "메인 제목", "placeholder": "임팩트 있는 제목" },
+            "subtitle": { "type": "text", "value": "최신 AI 기술로 비즈니스를 혁신하세요. 빠른 시작, 강력한 성과.", "editable": true, "label": "부제목", "placeholder": "간결하고 설득력 있는 설명" },
+            "ctaText": { "type": "text", "value": "무료로 시작하기", "editable": true, "label": "버튼 텍스트" },
+            "ctaLink": { "type": "link", "value": "#contact", "editable": true, "label": "버튼 링크" },
+            "secondaryCtaText": { "type": "text", "value": "데모 보기", "editable": true, "label": "보조 버튼 텍스트" },
+            "socialProof": { "type": "text", "value": "2,000+ 기업이 신뢰합니다", "editable": true, "label": "소셜 프루프 텍스트" }
+          }
+        },
+        {
+          "id": "comp-features",
+          "type": "Features",
+          "order": 2,
+          "visible": true,
+          "slots": {
+            "sectionTitle": { "type": "text", "value": "왜 우리를 선택할까요", "editable": true, "label": "섹션 제목" },
+            "sectionSubtitle": { "type": "text", "value": "강력한 기능으로 경쟁 우위를 확보하세요", "editable": true, "label": "섹션 부제목" },
+            "items": {
+              "type": "list",
+              "value": [
+                { "icon": "⚡", "title": "초고속 처리", "desc": "AI 기반 처리로 기존 대비 10배 빠른 성능을 제공합니다." },
+                { "icon": "🔒", "title": "엔터프라이즈 보안", "desc": "SOC2, ISO27001 인증. 데이터는 항상 안전하게 보호됩니다." },
+                { "icon": "🤖", "title": "AI 자동화", "desc": "반복 업무를 자동화하고 팀이 핵심 업무에 집중할 수 있게 합니다." },
+                { "icon": "📊", "title": "실시간 분석", "desc": "실시간 대시보드로 비즈니스 인사이트를 즉시 확인하세요." },
+                { "icon": "🌐", "title": "글로벌 인프라", "desc": "전 세계 10개 리전에서 99.99% 업타임을 보장합니다." },
+                { "icon": "🎯", "title": "간편한 통합", "desc": "500+ SaaS 툴과 원클릭 통합. API 문서 완비." }
+              ],
+              "editable": true,
+              "label": "기능 항목"
+            }
+          }
+        },
+        {
+          "id": "comp-stats",
+          "type": "Stats",
+          "order": 3,
+          "visible": true,
+          "slots": {
+            "items": {
+              "type": "list",
+              "value": [
+                { "number": "10,000+", "label": "활성 고객사" },
+                { "number": "99.9%", "label": "업타임 SLA" },
+                { "number": "3초", "label": "평균 응답속도" },
+                { "number": "24/7", "label": "전담 지원" }
+              ],
+              "editable": true,
+              "label": "통계 항목"
+            }
+          }
+        },
+        {
+          "id": "comp-testimonials",
+          "type": "Testimonials",
+          "order": 4,
+          "visible": true,
+          "slots": {
+            "sectionTitle": { "type": "text", "value": "고객 후기", "editable": true, "label": "섹션 제목" },
+            "items": {
+              "type": "list",
+              "value": [
+                { "quote": "도입 3개월 만에 업무 효율이 40% 향상됐습니다. 팀 전체가 만족하고 있어요.", "name": "김지원", "role": "CTO, 스타트업A" },
+                { "quote": "기존 솔루션 대비 비용은 절반, 성능은 두 배입니다. 강력 추천합니다.", "name": "박민수", "role": "운영팀장, 기업B" },
+                { "quote": "고객 지원 팀이 정말 훌륭합니다. 문제가 생기면 즉시 해결해 주더군요.", "name": "이수진", "role": "서비스 매니저, 기업C" }
+              ],
+              "editable": true,
+              "label": "후기 항목"
+            }
+          }
+        },
+        {
+          "id": "comp-pricing",
+          "type": "Pricing",
+          "order": 5,
+          "visible": true,
+          "slots": {
+            "sectionTitle": { "type": "text", "value": "투명한 요금제", "editable": true, "label": "섹션 제목" },
+            "sectionSubtitle": { "type": "text", "value": "숨겨진 비용 없이 시작하세요", "editable": true, "label": "섹션 부제목" },
+            "plans": {
+              "type": "list",
+              "value": [
+                { "name": "Basic", "price": "₩19,900", "period": "/월", "popular": false, "features": ["프로젝트 5개", "팀원 3명", "10GB 스토리지", "이메일 지원"] },
+                { "name": "Pro", "price": "₩49,900", "period": "/월", "popular": true, "features": ["프로젝트 무제한", "팀원 20명", "100GB 스토리지", "우선 지원", "API 접근", "고급 분석"] },
+                { "name": "Enterprise", "price": "문의", "period": "", "popular": false, "features": ["모든 Pro 기능", "무제한 팀원", "전용 인프라", "SLA 보장", "전담 CSM", "맞춤 개발"] }
+              ],
+              "editable": true,
+              "label": "요금제 목록"
+            }
+          }
+        },
+        {
+          "id": "comp-cta",
+          "type": "CTA",
+          "order": 6,
+          "visible": true,
+          "slots": {
+            "title": { "type": "text", "value": "지금 바로 시작하세요", "editable": true, "label": "CTA 제목" },
+            "subtitle": { "type": "text", "value": "30일 무료 체험. 신용카드 불필요.", "editable": true, "label": "CTA 부제목" },
+            "buttonText": { "type": "text", "value": "무료로 시작하기", "editable": true, "label": "버튼 텍스트" },
+            "buttonLink": { "type": "link", "value": "/signup", "editable": true, "label": "버튼 링크" }
+          }
+        },
+        {
+          "id": "comp-footer",
+          "type": "Footer",
+          "order": 7,
+          "visible": true,
+          "slots": {
+            "logo": { "type": "text", "value": "MyBrand", "editable": true, "label": "로고 텍스트" },
+            "tagline": { "type": "text", "value": "더 나은 비즈니스를 위한 AI 플랫폼", "editable": true, "label": "태그라인" },
+            "copyright": { "type": "text", "value": "© 2026 MyBrand. All rights reserved.", "editable": true, "label": "저작권 표시" },
+            "links": {
+              "type": "list",
+              "value": [
+                { "text": "Privacy Policy", "url": "/privacy" },
+                { "text": "Terms of Service", "url": "/terms" },
+                { "text": "Cookie Policy", "url": "/cookies" }
+              ],
+              "editable": true,
+              "label": "푸터 링크"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "styleTokens": {
+    "colors": {
+      "primary": "#6366f1",
+      "secondary": "#8b5cf6",
+      "accent": "#a78bfa",
+      "background": "#030712",
+      "text": "#ffffff",
+      "muted": "#9ca3af"
+    },
+    "fonts": {
+      "heading": "Plus Jakarta Sans",
+      "body": "Inter"
+    },
+    "borderRadius": "md",
+    "spacing": "normal"
+  },
+  "metadata": {
+    "version": 1,
+    "createdAt": "2026-03-11",
+    "updatedAt": "2026-03-11"
+  }
+}

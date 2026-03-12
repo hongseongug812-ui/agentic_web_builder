@@ -7,6 +7,8 @@ BE Lead (코드 생성 + 리뷰) / BE Dev (리뷰)
   단일 main.py가 아닌 모듈화된 6개 이상 파일로 생성합니다.
 """
 
+from .guardrails import USER_INPUT_GUARDRAIL
+
 # ── BE Lead 기획 리뷰 ──
 BE_LEAD_REVIEW_PROMPT = """\
 너는 12년 경력의 시니어 백엔드 팀장이자 시스템 아키텍트이다.
@@ -41,7 +43,7 @@ BE_DEV_REVIEW_PROMPT = """\
 
 
 # ── BE Lead 코드 생성 (강화 버전) ──
-BE_LEAD_GENERATE_PROMPT = """\
+BE_LEAD_GENERATE_PROMPT = USER_INPUT_GUARDRAIL + """\
 너는 12년 경력의 시니어 백엔드 팀장이자 시스템 아키텍트야.
 확정된 기획서의 API 엔드포인트와 DB 스키마를 바탕으로
 **실무 수준의 모듈화된 Python 백엔드**를 FastAPI + SQLAlchemy로 생성해.

@@ -49,6 +49,14 @@ class DeployRequest(BaseModel):
     vercel_token: Optional[str] = Field(default=None, description="사용자가 직접 입력한 Vercel 토큰")
 
 
+class CloudflareDeployRequest(BaseModel):
+    """Cloudflare Pages 배포 요청"""
+    files: list[dict] = Field(..., description="[{path, code, language}]")
+    project_name: str = Field(default="agentic-preview")
+    cf_token: Optional[str] = Field(default=None, description="Cloudflare API 토큰")
+    cf_account_id: Optional[str] = Field(default=None, description="Cloudflare Account ID")
+
+
 class DeployResponse(BaseModel):
     url: str
     deployment_id: str
@@ -410,3 +418,75 @@ async def deploy_to_vercel(req: DeployRequest):
     except Exception as e:
         logger.error("배포 호출 실패: %s", str(e))
         raise HTTPException(status_code=502, detail=f"배포 실패: {str(e)}")
+
+
+# ──────────────────────────────────────────────
+# Cloudflare Pages 배포 엔드포인트
+# ──────────────────────────────────────────────
+CF_API = "https://api.cloudflare.com/client/v4"
+
+
+@router.post("/deploy/cloudflare", response_model=DeployResponse)
+async def deploy_to_cloudflare_pages(req: CloudflareDeployRequest):
+    """Cloudflare Pages Direct Upload API로 생성된 코드를 배포합니다."""
+    token = req.cf_token or os.getenv("CLOUDFLARE_API_TOKEN")
+    account_id = req.cf_account_id or os.getenv("CLOUDFLARE_ACCOUNT_ID")
+
+    if not token:
+        raise HTTPException(status_code=400, detail="Cloudflare API 토큰을 입력해주세요.")
+    if not account_id:
+        raise HTTPException(status_code=400, detail="Cloudflare Account ID를 입력해주세요.")
+
+    if not req.files:
+        raise HTTPException(status_code=400, detail="배포할 파일이 없습니다.")
+
+    # 프로젝트 이름: stable hash prefix
+    raw_name = re.sub(r'[^a-z0-9-]', '-', req.project_name.lower())[:20]
+    project_name = f"agb-{hashlib.md5(req.project_name.encode()).hexdigest()[:8]}-{raw_name}".strip("-")
+
+    # 단일 HTML 파일로 빌드 (Vercel과 동일 방식)
+    preview_html = _build_preview_html(req.files, req.project_name)
+    html_bytes = preview_html.encode("utf-8")
+
+    headers = {"Authorization": f"Bearer {token}"}
+
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            # 1) 프로젝트 생성 (이미 있으면 409 무시)
+            create_resp = await client.post(
+                f"{CF_API}/accounts/{account_id}/pages/projects",
+                headers={**headers, "Content-Type": "application/json"},
+                json={"name": project_name, "production_branch": "main"},
+            )
+            if create_resp.status_code not in (200, 201, 409):
+                errs = create_resp.json().get("errors", [{}])
+                msg = errs[0].get("message", create_resp.text[:200]) if errs else create_resp.text[:200]
+                raise HTTPException(status_code=502, detail=f"CF 프로젝트 생성 실패: {msg}")
+
+            # 2) 배포: multipart/form-data로 index.html 업로드
+            deploy_resp = await client.post(
+                f"{CF_API}/accounts/{account_id}/pages/projects/{project_name}/deployments",
+                headers=headers,
+                files={"index.html": ("index.html", html_bytes, "text/html")},
+            )
+
+            if deploy_resp.status_code not in (200, 201):
+                errs = deploy_resp.json().get("errors", [{}])
+                msg = errs[0].get("message", deploy_resp.text[:200]) if errs else deploy_resp.text[:200]
+                raise HTTPException(status_code=502, detail=f"CF Pages 배포 실패: {msg}")
+
+            result = deploy_resp.json().get("result", {})
+            raw_url = result.get("url", f"{project_name}.pages.dev")
+            deploy_url = raw_url if raw_url.startswith("http") else f"https://{raw_url}"
+            deploy_id = result.get("id", "")
+
+            logger.info("✅ Cloudflare Pages 배포 성공: %s", deploy_url)
+            return DeployResponse(url=deploy_url, deployment_id=deploy_id, status="deployed")
+
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Cloudflare API 타임아웃")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("CF 배포 실패: %s", str(e))
+        raise HTTPException(status_code=502, detail=f"CF 배포 실패: {str(e)}")

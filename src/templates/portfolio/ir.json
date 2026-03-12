@@ -1,0 +1,151 @@
+{
+  "id": "portfolio-001",
+  "name": "크리에이티브 포트폴리오",
+  "category": "portfolio",
+  "description": "작업물을 돋보이게 하는 포트폴리오",
+  "previewImage": "",
+  "pages": [
+    {
+      "id": "page-main",
+      "route": "/",
+      "title": "포트폴리오",
+      "components": [
+        {
+          "id": "comp-navbar",
+          "type": "Navbar",
+          "order": 0,
+          "visible": true,
+          "slots": {
+            "logo": { "type": "text", "value": "Jane Doe", "editable": true, "label": "이름 / 로고" },
+            "menuItems": {
+              "type": "list",
+              "value": ["Work", "About", "Skills", "Contact"],
+              "editable": true,
+              "label": "메뉴 항목"
+            },
+            "ctaText": { "type": "text", "value": "연락하기", "editable": true, "label": "CTA 버튼" },
+            "ctaLink": { "type": "link", "value": "#contact", "editable": true, "label": "CTA 링크" }
+          }
+        },
+        {
+          "id": "comp-hero",
+          "type": "Hero",
+          "order": 1,
+          "visible": true,
+          "slots": {
+            "title": { "type": "text", "value": "안녕하세요, 저는 Jane입니다 👋", "editable": true, "label": "인사말 제목" },
+            "subtitle": { "type": "text", "value": "UI/UX 디자이너 & 프론트엔드 개발자. 아이디어를 아름다운 디지털 경험으로 만듭니다.", "editable": true, "label": "자기소개" },
+            "ctaText": { "type": "text", "value": "작업물 보기", "editable": true, "label": "CTA 버튼 텍스트" },
+            "ctaLink": { "type": "link", "value": "#work", "editable": true, "label": "CTA 버튼 링크" },
+            "secondaryCtaText": { "type": "text", "value": "이력서 다운로드", "editable": true, "label": "보조 버튼" },
+            "socialProof": { "type": "text", "value": "5년 경력 · 50+ 프로젝트 · 30+ 고객사", "editable": true, "label": "경력 요약" }
+          }
+        },
+        {
+          "id": "comp-gallery",
+          "type": "Gallery",
+          "order": 2,
+          "visible": true,
+          "slots": {
+            "sectionTitle": { "type": "text", "value": "Selected Work", "editable": true, "label": "섹션 제목" },
+            "sectionSubtitle": { "type": "text", "value": "최근 진행한 프로젝트들을 소개합니다", "editable": true, "label": "섹션 부제목" },
+            "items": {
+              "type": "list",
+              "value": [
+                { "title": "E-commerce Redesign", "category": "UX Design", "year": "2026", "color": "from-purple-500 to-pink-500" },
+                { "title": "Mobile Banking App", "category": "Product Design", "year": "2025", "color": "from-blue-500 to-cyan-500" },
+                { "title": "SaaS Dashboard", "category": "Frontend Dev", "year": "2025", "color": "from-emerald-500 to-teal-500" },
+                { "title": "Brand Identity", "category": "Branding", "year": "2025", "color": "from-orange-500 to-red-500" },
+                { "title": "Portfolio Website", "category": "Web Design", "year": "2024", "color": "from-indigo-500 to-purple-500" },
+                { "title": "iOS App UI Kit", "category": "UI Design", "year": "2024", "color": "from-rose-500 to-pink-500" }
+              ],
+              "editable": true,
+              "label": "프로젝트 목록"
+            }
+          }
+        },
+        {
+          "id": "comp-about",
+          "type": "About",
+          "order": 3,
+          "visible": true,
+          "slots": {
+            "sectionTitle": { "type": "text", "value": "About Me", "editable": true, "label": "섹션 제목" },
+            "bio": { "type": "richtext", "value": "저는 5년간 스타트업과 대기업에서 UI/UX 디자인과 프론트엔드 개발을 해온 크리에이터입니다. 사용자 중심 설계와 아름다운 인터페이스로 비즈니스 목표를 달성하는 것을 좋아합니다.", "editable": true, "label": "자기소개 본문" },
+            "skills": {
+              "type": "list",
+              "value": ["Figma", "React", "TypeScript", "Next.js", "Tailwind CSS", "Framer Motion", "Adobe XD", "Prototyping"],
+              "editable": true,
+              "label": "기술 스택"
+            },
+            "stats": {
+              "type": "list",
+              "value": [
+                { "number": "5년+", "label": "경력" },
+                { "number": "50+", "label": "완성 프로젝트" },
+                { "number": "30+", "label": "고객사" },
+                { "number": "98%", "label": "고객 만족도" }
+              ],
+              "editable": true,
+              "label": "경력 통계"
+            }
+          }
+        },
+        {
+          "id": "comp-contact",
+          "type": "ContactForm",
+          "order": 4,
+          "visible": true,
+          "slots": {
+            "sectionTitle": { "type": "text", "value": "함께 일해요", "editable": true, "label": "섹션 제목" },
+            "sectionSubtitle": { "type": "text", "value": "새 프로젝트, 협업 제안, 그 외 무엇이든 환영합니다", "editable": true, "label": "섹션 부제목" },
+            "email": { "type": "text", "value": "hello@janedoe.design", "editable": true, "label": "이메일" },
+            "availability": { "type": "text", "value": "현재 프리랜서 프로젝트 수락 중", "editable": true, "label": "현재 상태" }
+          }
+        },
+        {
+          "id": "comp-footer",
+          "type": "Footer",
+          "order": 5,
+          "visible": true,
+          "slots": {
+            "logo": { "type": "text", "value": "Jane Doe", "editable": true, "label": "이름" },
+            "tagline": { "type": "text", "value": "Design. Code. Create.", "editable": true, "label": "태그라인" },
+            "copyright": { "type": "text", "value": "© 2026 Jane Doe. All rights reserved.", "editable": true, "label": "저작권" },
+            "links": {
+              "type": "list",
+              "value": [
+                { "text": "GitHub", "url": "https://github.com" },
+                { "text": "LinkedIn", "url": "https://linkedin.com" },
+                { "text": "Dribbble", "url": "https://dribbble.com" }
+              ],
+              "editable": true,
+              "label": "소셜 링크"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "styleTokens": {
+    "colors": {
+      "primary": "#a78bfa",
+      "secondary": "#c084fc",
+      "accent": "#e879f9",
+      "background": "#030712",
+      "text": "#ffffff",
+      "muted": "#9ca3af"
+    },
+    "fonts": {
+      "heading": "Plus Jakarta Sans",
+      "body": "Inter"
+    },
+    "borderRadius": "lg",
+    "spacing": "normal"
+  },
+  "metadata": {
+    "version": 1,
+    "createdAt": "2026-03-11",
+    "updatedAt": "2026-03-11"
+  }
+}

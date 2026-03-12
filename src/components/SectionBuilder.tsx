@@ -13,25 +13,25 @@ import {
     Layout,
 } from "lucide-react";
 import {
-    useFlowStore,
+    useProjectStore,
     AVAILABLE_SECTIONS,
     SECTION_CATEGORIES,
     FONT_OPTIONS,
     RADIUS_OPTIONS,
     SPACING_OPTIONS,
     LAYOUT_OPTIONS,
-} from "@/store/store";
+} from "@/store";
 
 /**
  * 섹션 빌더 — 페이지 섹션 추가/삭제/재정렬 + 디자인 토큰 설정
  */
 export default function SectionBuilder() {
-    const selectedSections = useFlowStore((s) => s.selectedSections);
-    const designTokens = useFlowStore((s) => s.designTokens);
-    const addSection = useFlowStore((s) => s.addSection);
-    const removeSection = useFlowStore((s) => s.removeSection);
-    const reorderSections = useFlowStore((s) => s.reorderSections);
-    const setDesignToken = useFlowStore((s) => s.setDesignToken);
+    const selectedSections = useProjectStore((s) => s.selectedSections);
+    const designTokens = useProjectStore((s) => s.designTokens);
+    const addSection = useProjectStore((s) => s.addSection);
+    const removeSection = useProjectStore((s) => s.removeSection);
+    const reorderSections = useProjectStore((s) => s.reorderSections);
+    const setDesignToken = useProjectStore((s) => s.setDesignToken);
 
     const [showPicker, setShowPicker] = useState(false);
     const [pickerFilter, setPickerFilter] = useState<string>("전체");

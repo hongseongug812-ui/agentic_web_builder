@@ -5,7 +5,7 @@ import {
     EdgeProps,
     getSmoothStepPath,
 } from "reactflow";
-import { useFlowStore } from "@/store/store";
+import { useAgentStore } from "@/store";
 
 /**
  * Custom edge with advanced animations:
@@ -27,10 +27,10 @@ function LetterEdge({
 }: EdgeProps) {
     const sourceAgentId = data?.sourceAgentId as string | undefined;
     const isReview = data?.isReview as boolean | undefined;
-    const agent = useFlowStore((s) =>
+    const agent = useAgentStore((s) =>
         s.agents.find((a) => a.id === sourceAgentId)
     );
-    const currentRound = useFlowStore((s) => s.currentRound);
+    const currentRound = useAgentStore((s) => s.currentRound);
     const isWorking = agent?.status === "working";
     const isDone = agent?.status === "done";
     const isError = agent?.status === "error";

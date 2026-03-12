@@ -3,7 +3,7 @@
 import { memo } from "react";
 import { Handle, Position, NodeProps } from "reactflow";
 import { Loader2, Check, Circle, User, ClipboardList, Code2, AlertCircle, Server } from "lucide-react";
-import { useFlowStore, AgentStatus } from "@/store/store";
+import { useAgentStore, AgentStatus } from "@/store";
 
 /* ── Role config ── */
 const roleConfig: Record<string, {
@@ -61,8 +61,8 @@ function StatusBadge({ status }: { status: AgentStatus }) {
 /* ── Agent Node ── */
 function AgentNode({ data }: NodeProps) {
     const { role, agentId } = data as { role: string; label: string; agentId: string };
-    const agent = useFlowStore((s) => s.agents.find((a) => a.id === agentId));
-    const currentRound = useFlowStore((s) => s.currentRound);
+    const agent = useAgentStore((s) => s.agents.find((a) => a.id === agentId));
+    const currentRound = useAgentStore((s) => s.currentRound);
     const config = roleConfig[role] || roleConfig.user;
     const status = agent?.status || "idle";
     const name = agent?.name || data.label;

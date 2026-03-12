@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Download, FileCode, Folder, Copy, Check } from "lucide-react";
-import { useFlowStore } from "@/store/store";
+import { useAgentStore } from "@/store";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -26,8 +26,8 @@ interface GeneratedFile {
 }
 
 export default function CodePreviewPanel() {
-    const agentOutputData = useFlowStore((s) => s.agentOutputData);
-    const isRunning = useFlowStore((s) => s.isRunning);
+    const agentOutputData = useAgentStore((s) => s.agentOutputData);
+    const isRunning = useAgentStore((s) => s.isRunning);
     const [activeFile, setActiveFile] = useState<number>(0);
     const [activeTab, setActiveTab] = useState<"frontend" | "backend">("frontend");
     const [copied, setCopied] = useState(false);
@@ -72,8 +72,8 @@ export default function CodePreviewPanel() {
                 a.click();
                 URL.revokeObjectURL(url);
             }
-        } catch {
-            /* silent */
+        } catch (err) {
+            console.error("ZIP 내보내기 실패:", err);
         }
     };
 
@@ -108,8 +108,13 @@ export default function CodePreviewPanel() {
             </div>
 
             {!hasContent && isRunning ? (
-                <div className="flex-1 flex items-center justify-center">
-                    <p className="text-xs text-white/20">에이전트가 코드를 생성 중입니다...</p>
+                <div className="flex-1 flex flex-col items-center justify-center gap-3">
+                    <div className="flex gap-1">
+                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce [animation-delay:0ms]" />
+                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce [animation-delay:150ms]" />
+                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce [animation-delay:300ms]" />
+                    </div>
+                    <p className="text-xs text-white/25">에이전트가 코드를 생성 중입니다...</p>
                 </div>
             ) : (
                 <div className="flex flex-1 overflow-hidden">

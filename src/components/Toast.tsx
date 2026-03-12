@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { X, CheckCircle2, AlertCircle, Info, RotateCcw } from "lucide-react";
-import { useFlowStore } from "@/store/store";
+import { useAgentStore } from "@/store";
 
 interface ToastItem {
     id: number;
@@ -26,10 +26,10 @@ let nextId = 0;
 
 export default function ToastContainer() {
     const [toasts, setToasts] = useState<ToastItem[]>([]);
-    const error = useFlowStore((s) => s.error);
-    const setError = useFlowStore((s) => s.setError);
-    const retryAvailable = useFlowStore((s) => s.retryAvailable);
-    const retrySequence = useFlowStore((s) => s.retrySequence);
+    const error = useAgentStore((s) => s.error);
+    const setError = useAgentStore((s) => s.setError);
+    const retryAvailable = useAgentStore((s) => s.retryAvailable);
+    const retrySequence = useAgentStore((s) => s.retrySequence);
 
     // Show error toast when store error changes
     useEffect(() => {

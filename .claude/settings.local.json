@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run:*)",
+      "Bash(grep -v '//')",
+      "Bash(python -c \"from security import CodeValidator, validate_code, sanitize_user_input, InjectionDetectedError; print\\(''security module OK''\\)\")",
+      "Bash(python -c \"from prompts.cto_prompts import CTO_PLAN_PROMPT; print\\(''cto_prompts OK'', len\\(CTO_PLAN_PROMPT\\), ''chars''\\)\")",
+      "Bash(python -c \"from routes.orchestrator import router; print\\(''orchestrator OK''\\)\")"
+    ]
+  }
+}

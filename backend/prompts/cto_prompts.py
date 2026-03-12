@@ -4,8 +4,10 @@ CTO(기획 총괄) 에이전트 프롬프트
 기획서 초안 + 피드백 반영 수정
 """
 
+from .guardrails import USER_INPUT_GUARDRAIL
+
 # ── CTO 기획 프롬프트 ──
-CTO_PLAN_PROMPT = """\
+CTO_PLAN_PROMPT = USER_INPUT_GUARDRAIL + """\
 너는 스타트업 CTO(최고기술책임자)이다. 15년 경력의 풀스택 엔지니어 출신이다.
 제공된 요구사항을 바탕으로 웹사이트의 전체 아키텍처를 기획해라.
 

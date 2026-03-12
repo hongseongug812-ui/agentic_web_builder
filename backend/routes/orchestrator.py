@@ -46,6 +46,8 @@ from models import (
 )
 from llm_provider import get_llm_provider, generate_with_json_retry
 from routes.websocket import manager
+from agents.classifier import classify_input
+from security import sanitize_user_input, validate_code, InjectionDetectedError
 
 # ── 프롬프트 모듈 ──
 from prompts.cto_prompts import CTO_PLAN_PROMPT, CTO_REFINE_PROMPT
@@ -124,6 +126,14 @@ async def orchestrate(request: OrchestrateRequest):
     logger.info("회사형 멀티에이전트 파이프라인 시작 — provider=%s", provider)
     start_time_ms = int(time.time() * 1000)
 
+    # ── 보안: 프롬프트 인젝션 방어 ──────────────────────────────
+    try:
+        safe_prompt = sanitize_user_input(request.prompt)
+    except InjectionDetectedError as e:
+        logger.warning("프롬프트 인젝션 차단: %s", str(e))
+        await manager.broadcast("error", {"message": "보안 위반: 허용되지 않은 입력이 탐지되었습니다."})
+        raise HTTPException(status_code=400, detail=f"보안 위반: {str(e)}")
+
     # 세션 추적 시작
     session_id = 0
     try:
@@ -147,7 +157,7 @@ async def orchestrate(request: OrchestrateRequest):
     # ═══════════════════════════════════════════
     await _agent_start("cto-agent", 1, "planning", provider)
     try:
-        pm_data = await generate_with_json_retry(llm, CTO_PLAN_PROMPT, request.prompt)
+        pm_data = await generate_with_json_retry(llm, CTO_PLAN_PROMPT, safe_prompt)
         current_plan = ProjectPlan(**pm_data)
     except HTTPException:
         raise
@@ -287,6 +297,26 @@ async def orchestrate(request: OrchestrateRequest):
             break
         logger.info("QA 미통과 (점수: %d/10) — 코드 재생성", qa_score)
 
+    # ── 보안: 생성된 코드 정적 검증 ──────────────────────────────
+    all_files = []
+    if final_code:
+        all_files.extend(f.model_dump() for f in final_code.files)
+    if backend_code:
+        all_files.extend(f.model_dump() for f in backend_code.files)
+
+    if all_files:
+        code_validation = validate_code(all_files)
+        if not code_validation.passed:
+            logger.warning("코드 보안 검증 실패 — 위반 %d건", len(code_validation.violations))
+            await manager.broadcast("security_violations", {
+                "violations": code_validation.violations,
+                "warnings": code_validation.warnings,
+            })
+            # 위반이 있어도 파이프라인은 계속 진행 (경고로 처리)
+        elif code_validation.warnings:
+            logger.info("코드 보안 경고 %d건", len(code_validation.warnings))
+            await manager.broadcast("security_warnings", {"warnings": code_validation.warnings})
+
     # 결과 저장
     _last_result = {
         "plan": current_plan,
@@ -338,6 +368,13 @@ async def revise_code(request: RevisionRequest):
     llm = get_llm_provider(provider)
     existing_code = _last_result["code"]
 
+    # 보안: 수정 요청 인젝션 검사
+    try:
+        safe_feedback = sanitize_user_input(request.feedback)
+    except InjectionDetectedError as e:
+        logger.warning("수정 요청 인젝션 차단: %s", str(e))
+        raise HTTPException(status_code=400, detail=f"보안 위반: {str(e)}")
+
     await manager.broadcast("agent_start", {
         "agent": "fe-lead-agent", "round": 0, "action": "revising", "provider": provider
     })
@@ -348,7 +385,7 @@ async def revise_code(request: RevisionRequest):
         for f in existing_code.files[:4]
     )
     revision_prompt = build_revision_prompt(
-        code_summary, code_preview, len(existing_code.files), request.feedback,
+        code_summary, code_preview, len(existing_code.files), safe_feedback,
     )
 
     try:
@@ -369,6 +406,56 @@ async def revise_code(request: RevisionRequest):
     await manager.broadcast("pipeline_complete", {"status": "revised"})
 
     return {"status": "revised", "files_count": len(revised_code.files), "summary": revised_code.summary}
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 입력 분류기
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+class ClassifyRequest(PydanticBaseModel):
+    text: str
+    current_ir: dict = {}
+    provider: str = "gpt"
+
+
+@router.post("/classify")
+async def classify_user_input(request: ClassifyRequest):
+    """
+    사용자 입력을 분류합니다.
+    반환: { category, target_component, target_slot, new_value, style_key, confidence, method }
+    - slot_edit   → IR 슬롯 직접 수정 (LLM 무호출)
+    - style_edit  → styleTokens 수정 (LLM 무호출)
+    - structure   → 에이전트 파이프라인 실행 필요
+    """
+    try:
+        llm = get_llm_provider(request.provider)
+        result = await classify_input(request.text, request.current_ir, llm)
+        logger.info("분류 결과: %s (confidence=%.2f, method=%s)",
+                    result["category"], result.get("confidence", 0), result.get("method", "?"))
+
+        # 분류기 에이전트 상태 브로드캐스트
+        await manager.broadcast("agent_start", {
+            "agent": "classifier-agent", "round": 0, "action": "classifying", "provider": request.provider
+        })
+        await manager.broadcast("debate_message", {
+            "agent": "classifier",
+            "round": 0,
+            "message_type": result["category"],
+            "content": f"🔍 분류기: '{result['category']}' 경로 선택 (신뢰도 {result.get('confidence', 0):.0%}, 방법: {result.get('method', '?')})",
+            "data": result,
+        })
+        await manager.broadcast("agent_done", {"agent": "classifier-agent", "round": 0})
+        return result
+    except Exception as e:
+        logger.error("분류 오류: %s", str(e))
+        return {
+            "category": "structure",
+            "target_component": None,
+            "target_slot": None,
+            "new_value": None,
+            "style_key": None,
+            "confidence": 0.5,
+            "method": "error_fallback",
+        }
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

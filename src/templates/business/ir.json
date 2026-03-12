@@ -1,0 +1,191 @@
+{
+  "id": "business-001",
+  "name": "비즈니스 웹사이트",
+  "category": "business",
+  "description": "신뢰감 있는 기업 웹사이트",
+  "previewImage": "",
+  "pages": [
+    {
+      "id": "page-main",
+      "route": "/",
+      "title": "메인",
+      "components": [
+        {
+          "id": "comp-navbar",
+          "type": "Navbar",
+          "order": 0,
+          "visible": true,
+          "slots": {
+            "logo": { "type": "text", "value": "CorpName", "editable": true, "label": "회사명 / 로고" },
+            "menuItems": {
+              "type": "list",
+              "value": ["서비스", "회사 소개", "실적", "문의"],
+              "editable": true,
+              "label": "메뉴 항목"
+            },
+            "ctaText": { "type": "text", "value": "문의하기", "editable": true, "label": "CTA 버튼" },
+            "ctaLink": { "type": "link", "value": "#contact", "editable": true, "label": "CTA 링크" }
+          }
+        },
+        {
+          "id": "comp-hero",
+          "type": "Hero",
+          "order": 1,
+          "visible": true,
+          "slots": {
+            "title": { "type": "text", "value": "신뢰와 전문성으로 함께 성장합니다", "editable": true, "label": "메인 제목" },
+            "subtitle": { "type": "text", "value": "20년 업계 경험을 바탕으로 최고의 솔루션을 제공합니다. 고객 만족을 최우선으로 생각합니다.", "editable": true, "label": "부제목" },
+            "ctaText": { "type": "text", "value": "서비스 알아보기", "editable": true, "label": "버튼 텍스트" },
+            "ctaLink": { "type": "link", "value": "#services", "editable": true, "label": "버튼 링크" },
+            "secondaryCtaText": { "type": "text", "value": "포트폴리오 보기", "editable": true, "label": "보조 버튼" },
+            "socialProof": { "type": "text", "value": "500+ 완성 프로젝트 · 100+ 파트너사", "editable": true, "label": "실적 요약" }
+          }
+        },
+        {
+          "id": "comp-features",
+          "type": "Features",
+          "order": 2,
+          "visible": true,
+          "slots": {
+            "sectionTitle": { "type": "text", "value": "핵심 서비스", "editable": true, "label": "섹션 제목" },
+            "sectionSubtitle": { "type": "text", "value": "전문성을 바탕으로 최적의 솔루션을 제공합니다", "editable": true, "label": "섹션 부제목" },
+            "items": {
+              "type": "list",
+              "value": [
+                { "icon": "🏗️", "title": "건설 관리", "desc": "프로젝트 기획부터 완공까지 전문 관리팀이 책임집니다." },
+                { "icon": "📐", "title": "설계 & 디자인", "desc": "최신 BIM 기술로 정밀한 설계와 3D 시각화를 제공합니다." },
+                { "icon": "🔩", "title": "시공 & 감리", "desc": "숙련된 기술자들이 안전하고 정확한 시공을 보장합니다." },
+                { "icon": "♻️", "title": "친환경 솔루션", "desc": "에너지 효율과 환경 영향을 최소화하는 그린 빌딩을 추구합니다." },
+                { "icon": "📋", "title": "인허가 & 법무", "desc": "복잡한 인허가 절차를 원스톱으로 처리해 드립니다." },
+                { "icon": "🛡️", "title": "사후 관리", "desc": "완공 후 10년 하자 보증과 정기 점검 서비스를 제공합니다." }
+              ],
+              "editable": true,
+              "label": "서비스 목록"
+            }
+          }
+        },
+        {
+          "id": "comp-stats",
+          "type": "Stats",
+          "order": 3,
+          "visible": true,
+          "slots": {
+            "items": {
+              "type": "list",
+              "value": [
+                { "number": "20년+", "label": "업계 경력" },
+                { "number": "500+", "label": "완성 프로젝트" },
+                { "number": "100+", "label": "파트너사" },
+                { "number": "98%", "label": "고객 만족도" }
+              ],
+              "editable": true,
+              "label": "실적 통계"
+            }
+          }
+        },
+        {
+          "id": "comp-about",
+          "type": "About",
+          "order": 4,
+          "visible": true,
+          "slots": {
+            "sectionTitle": { "type": "text", "value": "회사 소개", "editable": true, "label": "섹션 제목" },
+            "bio": { "type": "richtext", "value": "저희는 2004년 설립 이래 20년간 건설 산업의 혁신을 이끌어왔습니다. 최고의 전문가로 구성된 팀이 고객의 꿈을 현실로 만들어 드립니다. 품질과 안전, 그리고 고객 만족을 최우선 가치로 삼고 있습니다.", "editable": true, "label": "회사 소개 본문" },
+            "skills": {
+              "type": "list",
+              "value": ["건축 설계", "구조 엔지니어링", "인테리어 디자인", "프로젝트 관리", "친환경 인증", "BIM 설계"],
+              "editable": true,
+              "label": "전문 분야"
+            },
+            "stats": {
+              "type": "list",
+              "value": [
+                { "number": "2004년", "label": "설립" },
+                { "number": "200명+", "label": "전문 인력" },
+                { "number": "전국 10개", "label": "지사" },
+                { "number": "5조+", "label": "누적 시공액" }
+              ],
+              "editable": true,
+              "label": "회사 통계"
+            }
+          }
+        },
+        {
+          "id": "comp-testimonials",
+          "type": "Testimonials",
+          "order": 5,
+          "visible": true,
+          "slots": {
+            "sectionTitle": { "type": "text", "value": "고객 이야기", "editable": true, "label": "섹션 제목" },
+            "items": {
+              "type": "list",
+              "value": [
+                { "quote": "계약부터 완공까지 전 과정이 체계적이고 투명했습니다. 예산과 일정을 완벽하게 지켜줘서 감사합니다.", "name": "이현우", "role": "대표이사, (주)테크빌딩" },
+                { "quote": "친환경 설계 덕분에 에너지 비용이 30% 절감됐습니다. 전문성이 느껴지는 회사입니다.", "name": "정미경", "role": "시설팀장, 교육기관" },
+                { "quote": "복잡한 인허가 절차를 전부 처리해 주셔서 저는 사업에만 집중할 수 있었어요.", "name": "박건호", "role": "오너, 상가건물주" }
+              ],
+              "editable": true,
+              "label": "고객 후기"
+            }
+          }
+        },
+        {
+          "id": "comp-contact",
+          "type": "ContactForm",
+          "order": 6,
+          "visible": true,
+          "slots": {
+            "sectionTitle": { "type": "text", "value": "프로젝트 문의", "editable": true, "label": "섹션 제목" },
+            "sectionSubtitle": { "type": "text", "value": "무엇이든 편하게 문의하세요. 24시간 내에 답변 드립니다", "editable": true, "label": "섹션 부제목" },
+            "email": { "type": "text", "value": "contact@corpname.co.kr", "editable": true, "label": "이메일" },
+            "phone": { "type": "text", "value": "02-1234-5678", "editable": true, "label": "전화번호" },
+            "address": { "type": "text", "value": "서울시 강남구 테헤란로 123", "editable": true, "label": "주소" },
+            "availability": { "type": "text", "value": "월~금 09:00 ~ 18:00", "editable": true, "label": "운영시간" }
+          }
+        },
+        {
+          "id": "comp-footer",
+          "type": "Footer",
+          "order": 7,
+          "visible": true,
+          "slots": {
+            "logo": { "type": "text", "value": "CorpName", "editable": true, "label": "회사명" },
+            "tagline": { "type": "text", "value": "신뢰와 전문성으로 만드는 공간", "editable": true, "label": "태그라인" },
+            "copyright": { "type": "text", "value": "© 2026 CorpName Co., Ltd. All rights reserved.", "editable": true, "label": "저작권" },
+            "links": {
+              "type": "list",
+              "value": [
+                { "text": "개인정보처리방침", "url": "/privacy" },
+                { "text": "이용약관", "url": "/terms" },
+                { "text": "사이트맵", "url": "/sitemap" }
+              ],
+              "editable": true,
+              "label": "푸터 링크"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "styleTokens": {
+    "colors": {
+      "primary": "#2563eb",
+      "secondary": "#1e40af",
+      "accent": "#3b82f6",
+      "background": "#030712",
+      "text": "#ffffff",
+      "muted": "#9ca3af"
+    },
+    "fonts": {
+      "heading": "Plus Jakarta Sans",
+      "body": "Inter"
+    },
+    "borderRadius": "sm",
+    "spacing": "normal"
+  },
+  "metadata": {
+    "version": 1,
+    "createdAt": "2026-03-11",
+    "updatedAt": "2026-03-11"
+  }
+}
